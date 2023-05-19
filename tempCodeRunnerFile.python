@@ -1,0 +1,5 @@
+tab = []
+for i in range(10): # 10 est le nombre de cases
+    tab.append(int(input("Entrer la valeur :")))
+for j in tab:
+    print(j) # Affichage de chaque valeur du tableau

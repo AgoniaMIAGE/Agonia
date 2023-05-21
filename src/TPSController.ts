@@ -8,7 +8,7 @@ import { Zombie } from "./Zombie";
 import * as CANNON from 'cannon';
 
 export class TPSController {
-    private _camera: ArcRotateCamera;
+    private _camera: FreeCamera;
     private _cameraDistance: number = 10; // adjust as needed
     private _cameraHeightOffset: number = 2; // adjust as needed
     private _cameraTargetOffset: Vector3 = new Vector3(0, 1, 0);
@@ -128,7 +128,7 @@ export class TPSController {
         this._playerHealth = new PlayerHealth(this._scene, this._weapon, 200);
         this._reloadSound = new Sound("pistolsoundreload", "sounds/pistol-reload.mp3", this._scene);
     }
-    
+
     /**
      * launched every 60ms 
      */
@@ -140,7 +140,7 @@ export class TPSController {
                 } else {
                     this._cooldown_time = 0;
                 }
-                
+
                 // Animations change depending on the current speed
                 switch (this._camera.speed) {
                     case 0:
@@ -180,46 +180,38 @@ export class TPSController {
             }, 60);
         });
     }
-    
+
     private manageAnimation(animation) {
         this._currentAnim = animation;
         this._animatePlayer();
     }
 
-    /**
-     * create the camera which represents the player (FPS)
-     */
     private createController(): void {
-    let arcRotateCamera = new ArcRotateCamera("ArcRotateCam", 0, 0, 10, new Vector3(0, 10, -10), this._scene);
-    arcRotateCamera.radius = 30; // Distance de la caméra à l'objet cible
-    arcRotateCamera.target = this._playerMesh.position; // Objet cible à suivre
+        let arcRotateCamera = new ArcRotateCamera(
+            "ArcRotateCam",
+            0,
+            0,
+            10,
+            new Vector3(0, 10, -10),
+            this._scene
+        );
+        arcRotateCamera.radius = 30;
+        arcRotateCamera.target = new Vector3(0, 10, 0);
 
-    // Ajuster la hauteur de la caméra par rapport à l'objet cible
-    arcRotateCamera.beta = Math.PI / 3; // Angle de vue vertical (hauteur)
-    
-    // Ajuster l'angle de vue horizontal (rotation)
-    arcRotateCamera.alpha = Math.PI / 2; // Angle de vue horizontal (rotation)
+        arcRotateCamera.beta = Math.PI / 3;
+        arcRotateCamera.alpha = Math.PI / 2;
+        arcRotateCamera.angularSensibilityX = 500;
+        arcRotateCamera.angularSensibilityY = 500;
+        arcRotateCamera.lowerRadiusLimit = 10;
+        arcRotateCamera.upperRadiusLimit = 50;
 
-    // Pour l'accélération et la vitesse maximale, vous pouvez utiliser les valeurs suivantes
-    arcRotateCamera.angularSensibilityX = 500; // Sensibilité de la rotation horizontale (vitesse d'accélération)
-    arcRotateCamera.angularSensibilityY = 500; // Sensibilité de la rotation verticale (vitesse d'accélération)
-    arcRotateCamera.lowerRadiusLimit = 10; // Limite inférieure de la distance de la caméra à l'objet cible
-    arcRotateCamera.upperRadiusLimit = 50; // Limite supérieure de la distance de la caméra à l'objet cible
+        this._camera = arcRotateCamera;
+        this._scene.activeCamera = arcRotateCamera;
 
-    this._camera = arcRotateCamera;
-    this._scene.activeCamera = arcRotateCamera;
-
-    if (this._playerMesh) {
-        arcRotateCamera.target = this._playerMesh.position;
+        if (this._playerMesh) {
+            arcRotateCamera.target = this._playerMesh.position;
+        }
     }
-
-    
-        // hitbox + gravity
-    
-        // Définir la caméra comme joueur (sur sa hitbox)
-        // this._camera.ellipsoid = new Vector3(0.5, 1.1, 0.5);
-    }
-    
 
 
     private i: int;
@@ -363,6 +355,7 @@ export class TPSController {
 
             this._setUpAnimations();
             this._animatePlayer();
+
 
             //shooting part
             this._cooldown_fire = 0.2;

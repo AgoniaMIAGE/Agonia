@@ -1,4 +1,4 @@
-import { Animation, CannonJSPlugin, PhysicsImpostor, StandardMaterial, MeshBuilder, Tools, RayHelper, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera, FollowCamera } from "@babylonjs/core";
+import { Animation, CannonJSPlugin, PhysicsImpostor, StandardMaterial, MeshBuilder, Tools, RayHelper, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
 import { float } from "babylonjs";
 import { Boss } from "./Boss";
 import { Enemy } from "./Enemy";
@@ -8,7 +8,7 @@ import { Zombie } from "./Zombie";
 import * as CANNON from 'cannon';
 
 export class TPSController {
-    private _camera: FollowCamera;
+    private _camera: ArcRotateCamera;
     private _cameraDistance: number = 10; // adjust as needed
     private _cameraHeightOffset: number = 2; // adjust as needed
     private _cameraTargetOffset: Vector3 = new Vector3(0, 1, 0);
@@ -190,23 +190,36 @@ export class TPSController {
      * create the camera which represents the player (FPS)
      */
     private createController(): void {
-        let followCamera = new FollowCamera("FollowCam", new Vector3(0, 10, -10), this._scene);
-        followCamera.radius = 30; // how far from the object to follow
-        followCamera.heightOffset = 10; // how high from the object to place the camera
-        followCamera.rotationOffset = 0; // the viewing angle
-        followCamera.cameraAcceleration = 0.05; // how fast to move
-        followCamera.maxCameraSpeed = 20; // speed limit
-        followCamera.lockedTarget = this._playerMesh; // target to follow
+    let arcRotateCamera = new ArcRotateCamera("ArcRotateCam", 0, 0, 10, new Vector3(0, 10, -10), this._scene);
+    arcRotateCamera.radius = 30; // Distance de la caméra à l'objet cible
+    arcRotateCamera.target = this._playerMesh.position; // Objet cible à suivre
 
-        this._camera = followCamera;
-        this._scene.activeCamera = followCamera;
+    // Ajuster la hauteur de la caméra par rapport à l'objet cible
+    arcRotateCamera.beta = Math.PI / 3; // Angle de vue vertical (hauteur)
+    
+    // Ajuster l'angle de vue horizontal (rotation)
+    arcRotateCamera.alpha = Math.PI / 2; // Angle de vue horizontal (rotation)
 
-        //hitbox + gravity
-        
-        //define the camera as player (on his hitbox)
-        //this._camera.ellipsoid = new Vector3(0.5, 1.1, 0.5);
+    // Pour l'accélération et la vitesse maximale, vous pouvez utiliser les valeurs suivantes
+    arcRotateCamera.angularSensibilityX = 500; // Sensibilité de la rotation horizontale (vitesse d'accélération)
+    arcRotateCamera.angularSensibilityY = 500; // Sensibilité de la rotation verticale (vitesse d'accélération)
+    arcRotateCamera.lowerRadiusLimit = 10; // Limite inférieure de la distance de la caméra à l'objet cible
+    arcRotateCamera.upperRadiusLimit = 50; // Limite supérieure de la distance de la caméra à l'objet cible
 
+    this._camera = arcRotateCamera;
+    this._scene.activeCamera = arcRotateCamera;
+
+    if (this._playerMesh) {
+        arcRotateCamera.target = this._playerMesh.position;
     }
+
+    
+        // hitbox + gravity
+    
+        // Définir la caméra comme joueur (sur sa hitbox)
+        // this._camera.ellipsoid = new Vector3(0.5, 1.1, 0.5);
+    }
+    
 
 
     private i: int;
@@ -301,10 +314,9 @@ export class TPSController {
     //Mouse Events
     private createPlayer(): void {
         SceneLoader.ImportMeshAsync("", "./models/", "pistol.glb", this._scene).then((result) => {
-            let env = result.meshes[0];
-            let allMeshes = env.getChildMeshes();
-            env.parent = this._camera;
-            this._playerMesh = env as Mesh;
+            this._playerMesh = result.meshes[0] as Mesh;
+            let allMeshes = this._playerMesh.getChildMeshes();
+            this._playerMesh.parent = this._camera;
             result.meshes[0].position = new Vector3(-0.25, -1.5, 2);
             result.meshes[0].rotation = new Vector3(0, 0, 0);
             result.meshes[0].scaling = new Vector3(0.5, 0.5, -0.5);

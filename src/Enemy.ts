@@ -1,6 +1,6 @@
 import * as BabylonViewer from '@babylonjs/viewer';
 import { Engine, Tools, KeyboardEventTypes, Space, AnimationGroup, int, AbstractMesh, float, ArcRotateCamera, OimoJSPlugin, SpotLight, HemisphericLight, Scene, Animation, Vector3, Mesh, Color3, Color4, ShadowGenerator, GlowLayer, PointLight, FreeCamera, CubeTexture, Sound, PostProcess, Effect, SceneLoader, Matrix, MeshBuilder, Quaternion, AssetsManager, StandardMaterial, PBRMaterial, Material } from "@babylonjs/core";
-import { FPSController } from "./FPSController";
+import { TPSController } from "./TPSController";
 import { PlayerHealth } from './PlayerHealth';
 
 export class Enemy {
@@ -49,6 +49,15 @@ export class Enemy {
         this.name = name;
         this.spawner(difficulty);
         this.update();
+        this._attack = new AnimationGroup("attack", scene);
+        this._fallingBack = new AnimationGroup("fallingBack", scene);
+        this._hit = new AnimationGroup("hit", scene);
+        this._idle = new AnimationGroup("idle", scene);
+        this._run = new AnimationGroup("run", scene);
+        this._walk = new AnimationGroup("walk", scene);
+        this._walk2 = new AnimationGroup("walk2", scene);
+        this._scream = new AnimationGroup("scream", scene);
+        
         Enemy.hitPlayer = false;
         this._ambiance = new Sound("ambiance", "sounds/zombieambiance.mp3", this.scene,null,{
             loop: false,

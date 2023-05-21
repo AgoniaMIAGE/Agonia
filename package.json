@@ -20,6 +20,7 @@
   "devDependencies": {
     "@babylonjs/core": "^6.4.1",
     "@babylonjs/inspector": "^6.4.1",
+    "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.5.1",
     "ts-loader": "^9.4.2",
     "typescript": "^5.0.4",
@@ -31,6 +32,7 @@
     "@babylonjs/loaders": "^6.4.1",
     "@babylonjs/viewer": "^6.4.1",
     "babylonjs": "^6.4.1",
+    "cannon": "^0.6.2",
     "express": "^4.18.2"
   }
 }

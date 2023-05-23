@@ -4,13 +4,12 @@ import "@babylonjs/loaders";
 
 import { SkyMaterial } from "@babylonjs/materials";
 import { AdvancedDynamicTexture, StackPanel, Button, TextBlock, Rectangle, Control, Image } from "@babylonjs/gui";
-import { TPSController } from "./TPSController";
+import { FPSController } from "./FPSController";
 import { PlayerHealth } from "./PlayerHealth";
 import { Enemy } from "./Enemy";
 import { Mutant } from "./Mutant";
 import { Boss } from "./Boss";
 import { Zombie } from "./Zombie";
-import { CustomLoadingScreen } from "./CustomLoadingScreen";
 import { UtilityLayerRenderer, Engine, int, KeyboardEventTypes, Tools, ArcRotateCamera, OimoJSPlugin, SpotLight, HemisphericLight, Scene, Animation, Vector3, Mesh, Color3, Color4, ShadowGenerator, GlowLayer, PointLight, FreeCamera, CubeTexture, Sound, PostProcess, Effect, SceneLoader, Matrix, MeshBuilder, Quaternion, AssetsManager, StandardMaterial, PBRMaterial, Material, float, Light } from "@babylonjs/core";
 import { Round } from "./Round";
 
@@ -36,9 +35,8 @@ class App {
     private _currentRound: int = 1;
     private _isdead: boolean;
 
-
     //all weapons
-    private _fps: TPSController;
+    private _fps: FPSController;
 
     //Zombies
     private _enemies: Array<Enemy>;
@@ -96,7 +94,6 @@ class App {
     private async goToStart() {
         this._scene.detachControl(); //dont detect any inputs from this ui while the game is loading
         let scene = new Scene(this._engine);
-        scene.debugLayer.show();
         scene.clearColor = new Color4(0, 0, 0, 1);
         let camera = new FreeCamera("camera1", new Vector3(0, 0, 0), scene);
         camera.setTarget(Vector3.Zero());
@@ -225,7 +222,6 @@ class App {
      * generate all meshes with glb map file
      */
     private async createMap(): Promise<void> {
-        this._scene.debugLayer.show();
         var light1: HemisphericLight = new HemisphericLight("light1", new Vector3(0, 1, 0), this._scene); //white light
         light1.intensity = 0.05;
         light1.range = 100;
@@ -267,9 +263,6 @@ class App {
         allMeshes.map(allMeshes => {
             allMeshes.checkCollisions = true;
         })
-
-        // delete mesh collider FOR BLUE PROBLEM
-        //this._scene.getTransformNodeByUniqueId(752).dispose();
     }
 
     // the 3 enemies of each wave
@@ -296,17 +289,18 @@ class App {
     // launch the day and its functions, checks..
     public async day() {
         this.disableEnemies();
-        if (!this._isdead) {
-            this._currentRound += 1;
+        if(!this._isdead){
+            this._currentRound += 1;    
         }
         this._round.day();
         console.log(this._currentRound);
         if (this._currentRound == 3 || this._currentRound == 4 || this._currentRound == 7) {
+            this._fps.changeWeapon();
             PlayerHealth._current_Health = 200;
         }
         this._isdead = false;
-        await Tools.DelayAsync(20000);
-        //this.night();
+        await Tools.DelayAsync(2000000000000000000);
+        this.night();
     }
 
     // launch the night and its functions, implementations...
@@ -332,7 +326,7 @@ class App {
         this._gameScene = scene;
         this._scene.detachControl();
         this.createEnemies();
-        this._fps = new TPSController(this._gameScene, this._canvas, this._zombie, this._mutant, this._boss, this._zombie);
+        this._fps = new FPSController(this._gameScene, this._canvas, this._zombie, this._mutant, this._boss, this._zombie);
 
         this._gameScene.onPointerDown = (evt) => {
             if (evt.button === 0)//left click
@@ -354,25 +348,13 @@ class App {
         this._state = State.GAME;
         this._scene = this._gameScene;
         this._scene.detachControl();
-
-
-        const loadingScreen = new CustomLoadingScreen();
-
-        // Assigner l'écran de chargement personnalisé au moteur Babylon.js
-        this._engine.loadingScreen = loadingScreen;
-
-        // Afficher l'écran de chargement
-        this._engine.loadingScreen.displayLoadingUI();
-
-        // Effectuer les opérations de chargement asynchrones
-        await this.createMap();
+        this._engine.displayLoadingUI();
+        this.createMap();
         await this._scene.whenReadyAsync();
-
-        // Masquer l'écran de chargement
-        this._engine.loadingScreen.hideLoadingUI();
-        console.log("game scene loaded");
-
+        this._engine.hideLoadingUI();
         //AFTER LOADING
+        this._scene.debugLayer.show();
+
         this._scene.attachControl();
         this.disableEnemies();
         this._round = new Round(this._scene, this._canvas, this._light1, this._skyboxMaterial, this._ambianceMusic, this._dayAmbianceMusic);
@@ -404,7 +386,7 @@ class App {
         imageRect.addControl(ammoImg);
 
         //Ammo amount / Ammo max
-        const ammoNb = new TextBlock("ammoNb", "" + TPSController._ammo);
+        const ammoNb = new TextBlock("ammoNb", "" + FPSController._ammo);
         ammoNb.resizeToFit = true;
         ammoNb.fontFamily = "Calibri";
         ammoNb.fontSize = "3px";
@@ -453,7 +435,7 @@ class App {
             cRight = 180 + (PlayerHealth._current_Health * (PlayerHealth._current_Health - 200)) / (-PlayerHealth._current_Health);
             //above is the update of the healthBar, bellow the update of the ammo amount
             ammoNb.text = "";
-            ammoNb.text = "   " + TPSController._ammo.toString() + "/" + TPSController._max_ammo;
+            ammoNb.text = "   " + FPSController._ammo.toString() + "/" + FPSController._max_ammo;
         })
     }
 

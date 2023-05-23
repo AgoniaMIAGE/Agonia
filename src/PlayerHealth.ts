@@ -1,6 +1,6 @@
 import { AbstractMesh, Color3, CurrentScreenBlock, DynamicTexture, int, Mesh,  MeshBuilder, Scene, StandardMaterial, Vector3 } from "@babylonjs/core";
 import { CubeMapToSphericalPolynomialTools } from "babylonjs";
-import { TPSController } from "./TPSController";
+import { FPSController } from "./FPSController";
 
 export class PlayerHealth {
 

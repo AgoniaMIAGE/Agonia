@@ -18,7 +18,7 @@ enum CharacterState {
     AimShot,
     AimIdle,
 }
-    
+
 let currentState: CharacterState = CharacterState.Idle;
 
 export class FPSController {
@@ -133,7 +133,7 @@ export class FPSController {
                 } else {
                     this._cooldown_time = 0;
                 }
-    
+
                 if (Enemy.hitPlayer) {
                     this.walkSpeed = 0.2;
                     this.runSpeed = 0.2;
@@ -145,7 +145,7 @@ export class FPSController {
             }, 60);
         });
     }
-    
+
 
     /**
      * create the camera which represents the player (FPS)
@@ -183,8 +183,8 @@ export class FPSController {
 
     private i: int;
 
-    //Weapon upgrades
-    private swap(lastWeapon) {
+    // Weapon upgrades
+    private swap(lastWeapon: AbstractMesh): void {
         lastWeapon.dispose();
         switch (this.i) {
             case 0:
@@ -201,24 +201,27 @@ export class FPSController {
         }
     }
 
-    //keyboard inputs
+    // Keyboard inputs
     private keyboardInput(): void {
+        // Variables to track the previous state
+        let prevMovementState: CharacterState = CharacterState.Idle;
+        let prevAimState: CharacterState = CharacterState.Idle;
+
         this._scene.onKeyboardObservable.add((kbInfo) => {
             switch (kbInfo.type) {
                 case KeyboardEventTypes.KEYDOWN:
                     switch (kbInfo.event.key) {
                         case 'z':
+                            this.zPressed = true;
+                            break;
                         case 's':
+                            this.sPressed = true;
+                            break;
                         case 'q':
+                            this.qPressed = true;
+                            break;
                         case 'd':
-                            this.walk(this.walkSpeed);
-                            this.walkSound();
-    
-                            if (this.rightClickPressed) {
-                                this.changeState(CharacterState.AimWalk);
-                            } else {
-                                this.changeState(CharacterState.Walk);
-                            }
+                            this.dPressed = true;
                             break;
                         case 'Shift':
                             if (this.zPressed || this.qPressed || this.sPressed || this.dPressed) {
@@ -227,11 +230,11 @@ export class FPSController {
                                 if (!this._runSound.isPlaying) {
                                     this._runSound.play();
                                 }
-                                this.changeState(CharacterState.Run);
+                                prevMovementState = CharacterState.Walk; // Update previous movement state
                             }
                             break;
                         case 'r':
-                            if (this._currentAnim != this._run && !this.reloadPressed) {
+                            if (this._currentAnim !== this._reload && !this.reloadPressed) {
                                 this.reloadPressed = true;
                                 this._reloadSound.play();
                                 this.changeState(CharacterState.Reload);
@@ -239,7 +242,7 @@ export class FPSController {
                             break;
                         case 'f':
                             this._flashlightSound.play();
-                            if (this._light.intensity == 5000) {
+                            if (this._light.intensity === 5000) {
                                 this._light.intensity = 0;
                             } else {
                                 this._light.intensity = 5000;
@@ -253,20 +256,49 @@ export class FPSController {
                             }
                             break;
                     }
-                    case KeyboardEventTypes.KEYUP:
-                switch (kbInfo.event.key) {
-                    case 'z':
-                    case 's':
-                    case 'q':
-                    case 'd':
+                    break;
+                case KeyboardEventTypes.KEYUP:
+                    switch (kbInfo.event.key) {
+                        case 'z':
+                            this.zPressed = false;
+                            break;
+                        case 's':
+                            this.sPressed = false;
+                            break;
+                        case 'q':
+                            this.qPressed = false;
+                            break;
+                        case 'd':
+                            this.dPressed = false;
+                            break;
+                    }
+
+                    if (!this.zPressed && !this.qPressed && !this.sPressed && !this.dPressed) {
                         this.changeState(CharacterState.Idle);
                         this.stopwalkSound();
-                        break;
-                }
-                break;
+                        prevMovementState = CharacterState.Idle; // Update previous movement state
+                    }
+
+                    if (this.zPressed || this.qPressed || this.sPressed || this.dPressed) {
+                        this.walk(this.walkSpeed);
+                        this.walkSound();
+                        prevMovementState = CharacterState.Walk; // Update previous movement state
+                    }
+
+                    if (prevMovementState === CharacterState.AimWalk || prevMovementState === CharacterState.AimIdle) {
+                        // Only transition to aim-related states if the right click is pressed
+                        if (this.rightClickPressed) {
+                            this.changeState(CharacterState.AimWalk);
+                            prevAimState = CharacterState.AimWalk; // Update previous aim state
+                        } else {
+                            this.changeState(CharacterState.Idle);
+                            prevAimState = CharacterState.Idle; // Update previous aim state
+                        }
+                    }
+                    break;
             }
         });
-    
+
         // Mouse events
         this._scene.onPointerObservable.add((pointerInfo) => {
             switch (pointerInfo.type) {
@@ -277,20 +309,21 @@ export class FPSController {
                             this._cooldown_time = 0;
                             this.changeState(CharacterState.Fire);
                         }
-                    } else if (pointerInfo.event.button == 2) {
+                    } else if (pointerInfo.event.button === 2) {
                         this.rightClickPressed = !this.rightClickPressed;
                         if (this.rightClickPressed) {
                             this.changeState(CharacterState.AimIdle);
                         } else {
                             this.changeState(CharacterState.Idle);
                         }
+
                     }
                     break;
             }
         });
     }
 
-    private async reloadAmmo() {
+private async reloadAmmo(): Promise<void> {
         await Tools.DelayAsync(1000);
         FPSController._ammo = FPSController._max_ammo;
     }

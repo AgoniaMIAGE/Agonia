@@ -1,4 +1,4 @@
-import { Animation, Tools, RayHelper, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput ,Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
+import { Animation, Tools, RayHelper, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
 import { float } from "babylonjs";
 import { Boss } from "./Boss";
 import { Enemy } from "./Enemy";
@@ -221,31 +221,31 @@ export class FPSController {
         this._camera.minZ = 0.1; // Réduire la valeur de la 'near plane'
     }
 
-    
+
     private enableCameraMovement(): void {
         // Réactiver les contrôles de mouvement de la caméra
-    
+
         // Ajouter les contrôles de mouvement de la caméra selon vos besoins
         this._camera.attachControl(this._canvas);
-    
+
         // Ajouter l'écouteur d'événement pour la capture du pointeur sur le canvas
         this._canvas.addEventListener("click", () => {
             this._canvas.requestPointerLock();
         });
     }
-    
+
     private disableCameraMovement(): void {
         // Désactiver les contrôles de mouvement de la caméra
-    
+
         // Supprimer les contrôles de mouvement de la caméra selon vos besoins
         this._camera.detachControl();
-    
+
         // Supprimer l'écouteur d'événement pour la capture du pointeur sur le canvas
         this._canvas.removeEventListener("click", () => {
             this._canvas.requestPointerLock();
         });
     }
-    
+
 
 
     // In your constructor or initialization method
@@ -842,7 +842,6 @@ export class FPSController {
     private initialPosition: Vector3 = null;
     private lastParentName: string = null;
     // Add these properties to your class
-    // Add these properties to your class
     private initialRotation: Vector3;
     private firstChild = null;
     private cameraKeys: { up: number[], down: number[], left: number[], right: number[] };
@@ -874,10 +873,6 @@ export class FPSController {
                     }
                 } else {
 
-                    // hide the hands
-                    this.firstChild = this._camera.getChildren(node => node.name === "__root__")[0];
-                    this.firstChild.setEnabled(false);
-
                     // Calculate the forward direction from the camera
                     const forward = this._camera.getForwardRay().direction;
 
@@ -889,25 +884,37 @@ export class FPSController {
 
                     // Check if an object was picked
                     if (pickInfo.hit) {
-                        const pickedObject = pickInfo.pickedMesh;
-                        this.examiningObjectMesh = pickedObject;
-                        this.initialPosition = pickedObject.position.clone();
-                        this.initialRotation = pickedObject.rotation.clone();
-                        this.lastParentName = pickedObject.parent.name;
+                        // Calculate the forward direction from the camera
+                        const forward = this._camera.getForwardRay().direction;
 
-                        // Perform the desired interaction with the picked object
-                        this.examineObject(pickedObject);
-                        this.moveObject(pickedObject);
+                        // Create a ray from the camera position in the forward direction
+                        const ray = new Ray(this._camera.position, forward);
 
-                        // Show the examination HUD
-                        //document.getElementById("examination-hud").style.display = "block";
+                        // Perform a raycast to check for intersections with objects in the scene
+                        const pickInfo = this._scene.pickWithRay(ray);
 
-                        // Lock the pointer and hide the cursor
-                        this._canvas.requestPointerLock();
-                        this.examiningObject = true;
+                        // Check if an object was picked and if it can be examined
+                        if (pickInfo && pickInfo.hit && this.canExamineObject(pickInfo.pickedMesh)) {
+                            const pickedObject = pickInfo.pickedMesh;
+                            this.examiningObjectMesh = pickedObject;
+                            this.initialPosition = pickedObject.position.clone();
+                            this.initialRotation = pickedObject.rotation.clone();
+                            this.lastParentName = pickedObject.parent.name;
 
-                        // Disable camera movement
-                        this.disableCameraMovement();
+                            // Perform the desired interaction with the picked object
+                            this.examineObject(pickedObject);
+                            this.moveObject(pickedObject);
+
+                            // Show the examination HUD
+                            //document.getElementById("examination-hud").style.display = "block";
+
+                            // Lock the pointer and hide the cursor
+                            this._canvas.requestPointerLock();
+                            this.examiningObject = true;
+
+                            // Disable camera movement
+                            this.disableCameraMovement();
+                        }
                     }
                 }
             }
@@ -917,95 +924,103 @@ export class FPSController {
     private mouseMoveListener: (event: MouseEvent) => void = null;
 
     private examineObject(object: AbstractMesh): void {// Calculate the new position for the object based on the camera's position and direction
-        // Calculate the new position for the object based on the camera's position and direction
-        const distance = 2; // Distance from the camera to the object (adjust as needed)
-        const offset = this._camera.getForwardRay().direction.scale(-distance); // Offset vector from the camera
-        const newPosition = this._camera.position.add(offset);
+    // hide the hands
+    this.firstChild = this._camera.getChildren(node => node.name === "__root__")[0];
+    this.firstChild.setEnabled(false);
+    // Make the object a child of the camera during examination
+    object.parent = this._camera;
+    object.position = new Vector3(0, 0, 0.5);
+    object.scaling.z =  Math.abs(object.scaling.z) * -1;
 
-        // Apply the object's scaling to the distance
-        const scaledDistance = distance / object.scaling.length();
-
-        // Set the new position for the object
-        object.position.copyFrom(newPosition).normalize().scaleInPlace(scaledDistance);
-
-        // Make the object a child of the camera during examination
-        object.parent = this._camera;
-
-        this.examiningObject = true;
-    }
+    this.examiningObject = true;
+}
 
     private moveObject(object: AbstractMesh): void {
-        // Enable pointer events for the canvas
-        this._canvas.style.pointerEvents = "all";
+    // Enable pointer events for the canvas
+    this._canvas.style.pointerEvents = "all";
 
-        // Lock the pointer and hide the cursor when clicking on the canvas
-        /*this._canvas.addEventListener("click", () => {
-            this._canvas.requestPointerLock();
-        });*/
+    // Add pointer event listeners for mouse movement
+    const mouseMoveListener = (event: MouseEvent) => {
+        // Check if the pointer is locked and if the object is being examined
+        if (document.pointerLockElement === this._canvas && this.examiningObject) {
+            // Perform rotation based on the mouse movement
+            object.rotate(Axis.Y, event.movementX * 0.01, Space.WORLD);
+            object.rotate(Axis.X, event.movementY * 0.01, Space.WORLD);
+            console.log(object.rotation.x);
+            console.log(object.rotation.y);
+            console.log(object.name);
+            console.log(object);
 
-        // Add pointer event listeners for mouse movement
-        const mouseMoveListener = (event: MouseEvent) => {
-            // Check if the pointer is locked and if the object is being examined
-            if (document.pointerLockElement === this._canvas && this.examiningObject) {
-                // Perform rotation based on the mouse movement
-                object.rotation.y += event.movementX * 0.01; // Adjust rotation speed as needed
-                object.rotation.x += event.movementY * 0.01; // Adjust rotation speed as needed
-            }
-        };
+        }
+    };
 
-        this.mouseMoveListener = mouseMoveListener;
-        this._canvas.addEventListener("mousemove", mouseMoveListener);
+    this.mouseMoveListener = mouseMoveListener;
+    this._canvas.addEventListener("mousemove", mouseMoveListener);
 
-        // Release the pointer lock and show the cursor when pressing escape
-        /*document.addEventListener("pointerlockchange", () => {
-            if (document.pointerLockElement !== this._canvas) {
-                this._canvas.style.cursor = "auto";
-            } else {
-                this._canvas.style.cursor = "none";
-            }
-        });*/
+}
+
+    private canExamineObject(object: AbstractMesh): boolean {
+        console.log(object.name);
+    let parent = object.parent;
+
+    // Iterate through the parents up to three levels
+    for (let i = 0; i < 2; i++) {
+        if (!parent || !parent.name) {
+            // No more parents to check, exit the loop
+            break;
+        }
+
+        // Check if the parent's name is in the allowed list
+        if (["Examine", "Interact", "Items", "Lamps"].includes(parent.name)) {
+            return true;
+        }
+
+        // Move up to the next parent
+        parent = parent.parent;
     }
+
+    // None of the parents have an allowed name, cannot examine the object
+    return false;
+}
 
 
     private createExaminationHUD(): void {
-        // Create the HUD element if it does not exist
-        // Create the HUD element if it does not exist
-        // Create the HUD element if it does not exist
-        var hud = document.getElementById("examination-hud");
-        if (!hud) {
-            hud = document.createElement("div");
+    // Create the HUD element if it does not exist
+    var hud = document.getElementById("examination-hud");
+    if(!hud) {
+        hud = document.createElement("div");
 
-            // Assign the id
-            hud.id = "examination-hud";
+        // Assign the id
+        hud.id = "examination-hud";
 
-            // Set the initial style
-            hud.style.display = "none";
-            hud.style.position = "fixed";
-            hud.style.top = "0";
-            hud.style.left = "0";
-            hud.style.width = "100%";
-            hud.style.height = "100%";
-            hud.style.background = "none"; // Remove the dark background
-            hud.style.color = "white";
-            hud.style.fontSize = "2em";
-            hud.style.padding = "1em";
-            hud.style.boxSizing = "border-box";
-            hud.style.overflowY = "auto";
-            hud.style.border = "2px solid red"; // Add an eerie red border
+        // Set the initial style
+        hud.style.display = "none";
+        hud.style.position = "fixed";
+        hud.style.top = "0";
+        hud.style.left = "0";
+        hud.style.width = "100%";
+        hud.style.height = "100%";
+        hud.style.background = "none"; // Remove the dark background
+        hud.style.color = "white";
+        hud.style.fontSize = "2em";
+        hud.style.padding = "1em";
+        hud.style.boxSizing = "border-box";
+        hud.style.overflowY = "auto";
+        hud.style.border = "2px solid red"; // Add an eerie red border
 
-            // Set the initial content with horror-themed style and icons
-            hud.innerHTML = `
+        // Set the initial content with horror-themed style and icons
+        hud.innerHTML = `
     <h1 style="text-align: center; font-size: 2.5em; font-family: 'Horror Font', cursive;">Examination</h1>
     <p style="font-family: 'Horror Font', cursive;">Object details...</p>
     <div style="text-align: center;">
   `;
 
-            // Add the HUD to the body
-            document.body.appendChild(hud);
-        }
-
-
+        // Add the HUD to the body
+        document.body.appendChild(hud);
     }
+
+
+}
 
 
 

@@ -323,7 +323,7 @@ export class FPSController {
         });
     }
 
-private async reloadAmmo(): Promise<void> {
+    private async reloadAmmo(): Promise<void> {
         await Tools.DelayAsync(1000);
         FPSController._ammo = FPSController._max_ammo;
     }
@@ -631,37 +631,39 @@ private async reloadAmmo(): Promise<void> {
 
     private changeState(newState: CharacterState) {
         // Stop the current animation
-        switch (currentState) {
-            case CharacterState.End:
-                this._end.stop();
-                break;
-            case CharacterState.Fire:
-                this._fire.stop();
-                break;
-            case CharacterState.Idle:
-                this._idle.stop();
-                break;
-            case CharacterState.Reload:
-                this._reload.stop();
-                break;
-            case CharacterState.Run:
-                this._run.stop();
-                break;
-            case CharacterState.Start:
-                this._start.stop();
-                break;
-            case CharacterState.Walk:
-                this._walk.stop();
-                break;
-            case CharacterState.AimWalk:
-                this._aim_walk.stop();
-                break;
-            case CharacterState.AimShot:
-                this._aim_shot.stop();
-                break;
-            case CharacterState.AimIdle:
-                this._aim_idle.stop();
-                break;
+        if (newState !== currentState) {
+            switch (currentState) {
+                case CharacterState.End:
+                    this._end.stop();
+                    break;
+                case CharacterState.Fire:
+                    this._fire.stop();
+                    break;
+                case CharacterState.Idle:
+                    this._idle.stop();
+                    break;
+                case CharacterState.Reload:
+                    this._reload.stop();
+                    break;
+                case CharacterState.Run:
+                    this._run.stop();
+                    break;
+                case CharacterState.Start:
+                    this._start.stop();
+                    break;
+                case CharacterState.Walk:
+                    this._walk.stop();
+                    break;
+                case CharacterState.AimWalk:
+                    this._aim_walk.stop();
+                    break;
+                case CharacterState.AimShot:
+                    this._aim_shot.stop();
+                    break;
+                case CharacterState.AimIdle:
+                    this._aim_idle.stop();
+                    break;
+            }
         }
 
         // Start the new animation
@@ -673,7 +675,7 @@ private async reloadAmmo(): Promise<void> {
                 this._fire.play();
                 break;
             case CharacterState.Idle:
-                this._idle.play();
+                this._idle.play(this._idle.loopAnimation);
                 break;
             case CharacterState.Reload:
                 this._reload.play();
@@ -701,4 +703,71 @@ private async reloadAmmo(): Promise<void> {
         // Update the current state
         currentState = newState;
     }
+
+    private getAnimationGroup(state: CharacterState): AnimationGroup {
+        switch (state) {
+            case CharacterState.End:
+                return this._end;
+            case CharacterState.Fire:
+                return this._fire;
+            case CharacterState.Idle:
+                return this._idle;
+            case CharacterState.Reload:
+                return this._reload;
+            case CharacterState.Run:
+                return this._run;
+            case CharacterState.Start:
+                return this._start;
+            case CharacterState.Walk:
+                return this._walk;
+            case CharacterState.AimWalk:
+                return this._aim_walk;
+            case CharacterState.AimShot:
+                return this._aim_shot;
+            case CharacterState.AimIdle:
+                return this._aim_idle;
+        }
+    }
+    
+
+    private createTransitionAnimation(currentAnim: AnimationGroup, newAnim: AnimationGroup): AnimationGroup {
+        // Create a transition animation that blends between the last frame of the current animation and the first frame of the new animation
+        const transitionAnim = new AnimationGroup("TransitionAnimation");
+        const currentKeys = currentAnim.targetedAnimations[0].animation.getKeys();
+        const newKeys = newAnim.targetedAnimations[0].animation.getKeys();
+        const transitionKeys = [
+            currentKeys[currentKeys.length - 1],
+            newKeys[0]
+        ];
+        const transitionAnimation = new Animation("TransitionAnimation", "worldMatrix", 60, Animation.ANIMATIONTYPE_MATRIX);
+        transitionAnimation.setKeys(transitionKeys);
+        transitionAnim.addTargetedAnimation(transitionAnimation, this._weapon);
+        transitionAnim.normalize(0, 1);
+        transitionAnim.loopAnimation = false;
+    
+        return transitionAnim;
+    }
+
+    private transitionToState(newState: CharacterState) {
+        // Get the current and new animations
+        const currentAnim = this.getAnimationGroup(currentState);
+        const newAnim = this.getAnimationGroup(newState);
+    
+        // Stop the current animation
+        currentAnim.stop();
+    
+        // Create a transition animation
+        const transitionAnim = this.createTransitionAnimation(currentAnim, newAnim);
+    
+        // Play the transition animation, then the new animation
+        transitionAnim.onAnimationEndObservable.addOnce(() => {
+            newAnim.play();
+        });
+        transitionAnim.play();
+    
+        // Update the current state
+        currentState = newState;
+    }
+    
+    
 }

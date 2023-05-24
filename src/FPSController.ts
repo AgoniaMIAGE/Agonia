@@ -1,4 +1,4 @@
-import { Animation, Tools, RayHelper, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
+import { Animation, Tools, RayHelper, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput ,Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
 import { float } from "babylonjs";
 import { Boss } from "./Boss";
 import { Enemy } from "./Enemy";
@@ -221,23 +221,32 @@ export class FPSController {
         this._camera.minZ = 0.1; // Réduire la valeur de la 'near plane'
     }
 
-    /**
-     * Movements rules
-     * @param camera this camera
-     */
+    
     private enableCameraMovement(): void {
-        this._camera.keysUp = this.cameraKeys.up;
-        this._camera.keysDown = this.cameraKeys.down;
-        this._camera.keysLeft = this.cameraKeys.left;
-        this._camera.keysRight = this.cameraKeys.right;
+        // Réactiver les contrôles de mouvement de la caméra
+    
+        // Ajouter les contrôles de mouvement de la caméra selon vos besoins
+        this._camera.attachControl(this._canvas);
+    
+        // Ajouter l'écouteur d'événement pour la capture du pointeur sur le canvas
+        this._canvas.addEventListener("click", () => {
+            this._canvas.requestPointerLock();
+        });
     }
-
+    
     private disableCameraMovement(): void {
-        this._camera.keysUp = [];
-        this._camera.keysDown = [];
-        this._camera.keysLeft = [];
-        this._camera.keysRight = [];
+        // Désactiver les contrôles de mouvement de la caméra
+    
+        // Supprimer les contrôles de mouvement de la caméra selon vos besoins
+        this._camera.detachControl();
+    
+        // Supprimer l'écouteur d'événement pour la capture du pointeur sur le canvas
+        this._canvas.removeEventListener("click", () => {
+            this._canvas.requestPointerLock();
+        });
     }
+    
+
 
     // In your constructor or initialization method
     private InitCameraKeys(): void {
@@ -829,6 +838,7 @@ export class FPSController {
         currentState = newState;
     }
 
+
     private initialPosition: Vector3 = null;
     private lastParentName: string = null;
     // Add these properties to your class
@@ -854,7 +864,7 @@ export class FPSController {
                         this.firstChild.setEnabled(true);
 
                         // Hide the examination HUD
-                        document.getElementById("examination-hud").style.display = "none";
+                        //document.getElementById("examination-hud").style.display = "none";
 
                         // Unlock the pointer and show the cursor
                         document.exitPointerLock();
@@ -864,9 +874,8 @@ export class FPSController {
                     }
                 } else {
 
+                    // hide the hands
                     this.firstChild = this._camera.getChildren(node => node.name === "__root__")[0];
-                    console.log(this.firstChild.name);
-                    console.log(this.firstChild.id);
                     this.firstChild.setEnabled(false);
 
                     // Calculate the forward direction from the camera
@@ -891,7 +900,7 @@ export class FPSController {
                         this.moveObject(pickedObject);
 
                         // Show the examination HUD
-                        document.getElementById("examination-hud").style.display = "block";
+                        //document.getElementById("examination-hud").style.display = "block";
 
                         // Lock the pointer and hide the cursor
                         this._canvas.requestPointerLock();
@@ -909,7 +918,7 @@ export class FPSController {
 
     private examineObject(object: AbstractMesh): void {// Calculate the new position for the object based on the camera's position and direction
         // Calculate the new position for the object based on the camera's position and direction
-        const distance = 1.5; // Distance from the camera to the object (adjust as needed)
+        const distance = 2; // Distance from the camera to the object (adjust as needed)
         const offset = this._camera.getForwardRay().direction.scale(-distance); // Offset vector from the camera
         const newPosition = this._camera.position.add(offset);
 
@@ -930,9 +939,9 @@ export class FPSController {
         this._canvas.style.pointerEvents = "all";
 
         // Lock the pointer and hide the cursor when clicking on the canvas
-        this._canvas.addEventListener("click", () => {
+        /*this._canvas.addEventListener("click", () => {
             this._canvas.requestPointerLock();
-        });
+        });*/
 
         // Add pointer event listeners for mouse movement
         const mouseMoveListener = (event: MouseEvent) => {
@@ -948,13 +957,13 @@ export class FPSController {
         this._canvas.addEventListener("mousemove", mouseMoveListener);
 
         // Release the pointer lock and show the cursor when pressing escape
-        document.addEventListener("pointerlockchange", () => {
+        /*document.addEventListener("pointerlockchange", () => {
             if (document.pointerLockElement !== this._canvas) {
                 this._canvas.style.cursor = "auto";
             } else {
                 this._canvas.style.cursor = "none";
             }
-        });
+        });*/
     }
 
 

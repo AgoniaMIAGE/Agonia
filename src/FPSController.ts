@@ -87,7 +87,7 @@ export class FPSController {
     //examining object 
     private examiningObject: boolean = false;
     private examiningObjectMesh: AbstractMesh;
-    private InteractiveObject : TransformNode;
+    private InteractiveObject: TransformNode;
 
     // firing animation flag
     private isFiring: boolean = false;
@@ -104,9 +104,10 @@ export class FPSController {
         this._zombie = zombie;
         this._mutant = mutant;
         this._boss = boss;
-        this.InteractiveObject= scene.getTransformNodeByName("InteractiveObject");
+        this.InteractiveObject = scene.getTransformNodeByName("InteractiveObject");
         this.createPistol();
         this.createController();
+        this.InitCameraKeys();
         this.keyboardInput();
         this.setupFlashlight();
         this.setupAllMeshes();
@@ -216,24 +217,49 @@ export class FPSController {
         this._camera.ellipsoid = new Vector3(1, 1.1, 1);
 
         //Movements
-        this.ApplyMovementRules(this._camera);
+        this.InitCameraKeys();
         this._camera.minZ = 0.1; // Réduire la valeur de la 'near plane'
-
     }
 
     /**
      * Movements rules
      * @param camera this camera
      */
-    ApplyMovementRules(camera: FreeCamera): void {
-        camera.keysUp.push(90);//z
-        camera.keysDown.push(83);//s
-        camera.keysLeft.push(81)//q
-        camera.keysRight.push(68);//d*
-        camera.minZ = 0.45;
-        camera.angularSensibility = 2000;
-        camera.inertia = 0.1;
+    private enableCameraMovement(): void {
+        this._camera.keysUp = this.cameraKeys.up;
+        this._camera.keysDown = this.cameraKeys.down;
+        this._camera.keysLeft = this.cameraKeys.left;
+        this._camera.keysRight = this.cameraKeys.right;
     }
+
+    private disableCameraMovement(): void {
+        this._camera.keysUp = [];
+        this._camera.keysDown = [];
+        this._camera.keysLeft = [];
+        this._camera.keysRight = [];
+    }
+
+    // In your constructor or initialization method
+    private InitCameraKeys(): void {
+        this.cameraKeys = {
+            up: [90], // z
+            down: [83], // s
+            left: [81], // q
+            right: [68] // d
+        };
+        this.ApplyMovementRules(this._camera);
+    }
+
+    ApplyMovementRules(camera: FreeCamera): void {
+        camera.keysUp = [...this.cameraKeys.up];
+        camera.keysDown = [...this.cameraKeys.down];
+        camera.keysLeft = [...this.cameraKeys.left];
+        camera.keysRight = [...this.cameraKeys.right];
+        camera.minZ = 0.1;
+        camera.angularSensibility = 2000;
+        camera.inertia = 0.0;
+    }
+
 
     private i: int;
 
@@ -805,22 +831,39 @@ export class FPSController {
 
     private initialPosition: Vector3 = null;
     private lastParentName: string = null;
+    // Add these properties to your class
+    // Add these properties to your class
+    private initialRotation: Vector3;
+    private firstChild = null;
+    private cameraKeys: { up: number[], down: number[], left: number[], right: number[] };
 
     private handleInteraction(): void {
         this._scene.onKeyboardObservable.add((kbInfo) => {
             if (kbInfo.type === KeyboardEventTypes.KEYDOWN && kbInfo.event.key === 'e') {
                 if (this.examiningObject) {
-                    // If already examining an object, put it back to its initial position
+                    // If already examining an object, put it back to its initial position and rotation
                     this.examiningObjectMesh.parent = this._scene.getTransformNodeByName(this.lastParentName);
                     this.examiningObjectMesh.position = this.initialPosition;
+                    this.examiningObjectMesh.rotation = this.initialRotation;
                     this.examiningObject = false;
+
+                    this.firstChild.setEnabled(true);
 
                     // Hide the examination HUD
                     document.getElementById("examination-hud").style.display = "none";
 
                     // Unlock the pointer and show the cursor
                     document.exitPointerLock();
+
+                    // Enable camera movement
+                    this.enableCameraMovement();
                 } else {
+
+                    this.firstChild = this._camera.getChildren(node => node.name === "__root__")[0];
+                    console.log(this.firstChild.name);
+                    console.log(this.firstChild.id);
+                    this.firstChild.setEnabled(false);
+
                     // Calculate the forward direction from the camera
                     const forward = this._camera.getForwardRay().direction;
 
@@ -835,6 +878,7 @@ export class FPSController {
                         const pickedObject = pickInfo.pickedMesh;
                         this.examiningObjectMesh = pickedObject;
                         this.initialPosition = pickedObject.position.clone();
+                        this.initialRotation = pickedObject.rotation.clone();
                         this.lastParentName = pickedObject.parent.name;
 
                         // Perform the desired interaction with the picked object
@@ -847,6 +891,9 @@ export class FPSController {
                         // Lock the pointer and hide the cursor
                         this._canvas.requestPointerLock();
                         this.examiningObject = true;
+
+                        // Disable camera movement
+                        this.disableCameraMovement();
                     }
                 }
             }
@@ -875,12 +922,12 @@ export class FPSController {
     private moveObject(object: AbstractMesh): void {
         // Enable pointer events for the canvas
         this._canvas.style.pointerEvents = "all";
-    
+
         // Lock the pointer and hide the cursor when clicking on the canvas
         this._canvas.addEventListener("click", () => {
             this._canvas.requestPointerLock();
         });
-    
+
         // Add pointer event listeners for mouse movement
         this._canvas.addEventListener("mousemove", (event) => {
             // Check if the pointer is locked and if the object is being examined
@@ -890,7 +937,7 @@ export class FPSController {
                 object.rotation.x += event.movementY * 0.01;; // Adjust rotation speed as needed
             }
         });
-    
+
         // Release the pointer lock and show the cursor when pressing escape
         document.addEventListener("pointerlockchange", () => {
             if (document.pointerLockElement !== this._canvas) {
@@ -900,7 +947,7 @@ export class FPSController {
             }
         });
     }
-    
+
 
     private createExaminationHUD(): void {
         // Create the HUD element if it does not exist
@@ -941,8 +988,5 @@ export class FPSController {
 
 
     }
-
-
-
 
 }

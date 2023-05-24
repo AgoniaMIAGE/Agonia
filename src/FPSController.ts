@@ -840,23 +840,28 @@ export class FPSController {
     private handleInteraction(): void {
         this._scene.onKeyboardObservable.add((kbInfo) => {
             if (kbInfo.type === KeyboardEventTypes.KEYDOWN && kbInfo.event.key === 'e') {
-                if (this.examiningObject) {
-                    // If already examining an object, put it back to its initial position and rotation
-                    this.examiningObjectMesh.parent = this._scene.getTransformNodeByName(this.lastParentName);
-                    this.examiningObjectMesh.position = this.initialPosition;
-                    this.examiningObjectMesh.rotation = this.initialRotation;
-                    this.examiningObject = false;
 
-                    this.firstChild.setEnabled(true);
+                if (this.mouseMoveListener) {
+                    this._canvas.removeEventListener("mousemove", this.mouseMoveListener);
+                    this.mouseMoveListener = null;
+                    if (this.examiningObject) {
+                        // If already examining an object, put it back to its initial position and rotation
+                        this.examiningObjectMesh.parent = this._scene.getTransformNodeByName(this.lastParentName);
+                        this.examiningObjectMesh.position = this.initialPosition;
+                        this.examiningObjectMesh.rotation = this.initialRotation;
+                        this.examiningObject = false;
 
-                    // Hide the examination HUD
-                    document.getElementById("examination-hud").style.display = "none";
+                        this.firstChild.setEnabled(true);
 
-                    // Unlock the pointer and show the cursor
-                    document.exitPointerLock();
+                        // Hide the examination HUD
+                        document.getElementById("examination-hud").style.display = "none";
 
-                    // Enable camera movement
-                    this.enableCameraMovement();
+                        // Unlock the pointer and show the cursor
+                        document.exitPointerLock();
+
+                        // Enable camera movement
+                        this.enableCameraMovement();
+                    }
                 } else {
 
                     this.firstChild = this._camera.getChildren(node => node.name === "__root__")[0];
@@ -900,6 +905,7 @@ export class FPSController {
         });
     }
 
+    private mouseMoveListener: (event: MouseEvent) => void = null;
 
     private examineObject(object: AbstractMesh): void {// Calculate the new position for the object based on the camera's position and direction
         // Calculate the new position for the object based on the camera's position and direction
@@ -929,14 +935,17 @@ export class FPSController {
         });
 
         // Add pointer event listeners for mouse movement
-        this._canvas.addEventListener("mousemove", (event) => {
+        const mouseMoveListener = (event: MouseEvent) => {
             // Check if the pointer is locked and if the object is being examined
             if (document.pointerLockElement === this._canvas && this.examiningObject) {
                 // Perform rotation based on the mouse movement
                 object.rotation.y += event.movementX * 0.01; // Adjust rotation speed as needed
-                object.rotation.x += event.movementY * 0.01;; // Adjust rotation speed as needed
+                object.rotation.x += event.movementY * 0.01; // Adjust rotation speed as needed
             }
-        });
+        };
+
+        this.mouseMoveListener = mouseMoveListener;
+        this._canvas.addEventListener("mousemove", mouseMoveListener);
 
         // Release the pointer lock and show the cursor when pressing escape
         document.addEventListener("pointerlockchange", () => {
@@ -988,5 +997,8 @@ export class FPSController {
 
 
     }
+
+
+
 
 }

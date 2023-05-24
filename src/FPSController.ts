@@ -1,4 +1,4 @@
-import { Animation, Tools, RayHelper, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
+import { Animation, Tools, RayHelper, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
 import { float } from "babylonjs";
 import { Boss } from "./Boss";
 import { Enemy } from "./Enemy";
@@ -18,7 +18,8 @@ enum CharacterState {
     AimShot,
     AimIdle,
 }
-
+let prevMovementState: CharacterState = CharacterState.Idle;
+let prevAimState: CharacterState = CharacterState.Idle;
 let currentState: CharacterState = CharacterState.Idle;
 
 export class FPSController {
@@ -76,15 +77,24 @@ export class FPSController {
     private zPressed: boolean = false;
     private qPressed: boolean = false;
     private sPressed: boolean = false;
+    private shiftPressed: boolean = false;
     private dPressed: boolean = false;
     private controlPressed: boolean = false;
     private controlIPressed: int = 0;
     private rightClickPressed = false;
     private reloadPressed = false;
 
+    //examining object 
+    private examiningObject: boolean = false;
+    private examiningObjectMesh: AbstractMesh;
+    private InteractiveObject : TransformNode;
+
+    // firing animation flag
+    private isFiring: boolean = false;
+
     //speed
-    public walkSpeed = 3;
-    public runSpeed = 4;
+    public walkSpeed = 1;
+    public runSpeed = 1.4;
 
     //soon an Array of Enemy instead of a simple zombie
     constructor(scene: Scene, canvas: HTMLCanvasElement, enemy: Enemy, mutant: Mutant, boss: Boss, zombie: Zombie) {
@@ -94,11 +104,14 @@ export class FPSController {
         this._zombie = zombie;
         this._mutant = mutant;
         this._boss = boss;
+        this.InteractiveObject= scene.getTransformNodeByName("InteractiveObject");
         this.createPistol();
         this.createController();
         this.keyboardInput();
         this.setupFlashlight();
         this.setupAllMeshes();
+        this.handleInteraction()
+        this.createExaminationHUD()
         this.update();
         this.i = 0;
         this._cooldown_time = 0;
@@ -142,10 +155,51 @@ export class FPSController {
                     this.walkSpeed = 3;
                     this.runSpeed = 4;
                 }
+                if (!this.isFiring) {
+
+                    if (!this.zPressed && !this.qPressed && !this.sPressed && !this.dPressed) {
+                        this.changeState(CharacterState.Idle);
+                        this.stopwalkSound();
+                        prevMovementState = CharacterState.Idle; // Update previous movement state
+                        this.transitionToState(CharacterState.Idle); // Transition to idle animation
+                    }
+
+                    if (!this.shiftPressed) {
+                        if (this.zPressed || this.qPressed || this.sPressed || this.dPressed) {
+                            this.walk(this.walkSpeed);
+                            this.walkSound();
+                            this.changeState(CharacterState.Walk);
+                        }
+                    }
+
+                    if (this.shiftPressed) {
+                        if (this.zPressed || this.qPressed || this.sPressed || this.dPressed) {
+                            this.walk(this.runSpeed);
+                            this._walkSound.stop();
+                            if (!this._runSound.isPlaying) {
+                                this._runSound.play();
+                            }
+                            this.changeState(CharacterState.Run);
+                        }
+                    }
+
+
+                    if (prevMovementState === CharacterState.AimWalk || prevMovementState === CharacterState.AimIdle) {
+                        // Only transition to aim-related states if the right click is pressed
+                        if (this.rightClickPressed) {
+                            this.changeState(CharacterState.AimWalk);
+                            prevAimState = CharacterState.AimWalk; // Update previous aim state
+                            this.transitionToState(CharacterState.AimWalk); // Transition to aim walk animation
+                        } else {
+                            this.changeState(CharacterState.Idle);
+                            prevAimState = CharacterState.Idle; // Update previous aim state
+                            this.transitionToState(CharacterState.Idle); // Transition to idle animation
+                        }
+                    }
+                }
             }, 60);
         });
     }
-
 
     /**
      * create the camera which represents the player (FPS)
@@ -201,13 +255,13 @@ export class FPSController {
         }
     }
 
-    // Keyboard inputs
     private keyboardInput(): void {
-        // Variables to track the previous state
-        let prevMovementState: CharacterState = CharacterState.Idle;
-        let prevAimState: CharacterState = CharacterState.Idle;
 
         this._scene.onKeyboardObservable.add((kbInfo) => {
+            // Vérifier si l'examen de l'objet est en cours
+            if (this.examiningObject) {
+                return; // Sortir de la fonction pour désactiver les interactions
+            }
             switch (kbInfo.type) {
                 case KeyboardEventTypes.KEYDOWN:
                     switch (kbInfo.event.key) {
@@ -224,14 +278,7 @@ export class FPSController {
                             this.dPressed = true;
                             break;
                         case 'Shift':
-                            if (this.zPressed || this.qPressed || this.sPressed || this.dPressed) {
-                                this.walk(this.runSpeed);
-                                this._walkSound.stop();
-                                if (!this._runSound.isPlaying) {
-                                    this._runSound.play();
-                                }
-                                prevMovementState = CharacterState.Walk; // Update previous movement state
-                            }
+                            this.shiftPressed = true;
                             break;
                         case 'r':
                             if (this._currentAnim !== this._reload && !this.reloadPressed) {
@@ -252,7 +299,6 @@ export class FPSController {
                             if (this._cooldown_fire <= this._cooldown_time / 60) {
                                 this.fire();
                                 this._cooldown_time = 0;
-                                this.changeState(CharacterState.Fire);
                             }
                             break;
                     }
@@ -271,36 +317,18 @@ export class FPSController {
                         case 'd':
                             this.dPressed = false;
                             break;
+                        case 'Shift':
+                            this.shiftPressed = false;
+                            break;
                     }
-
-                    if (!this.zPressed && !this.qPressed && !this.sPressed && !this.dPressed) {
-                        this.changeState(CharacterState.Idle);
-                        this.stopwalkSound();
-                        prevMovementState = CharacterState.Idle; // Update previous movement state
-                    }
-
-                    if (this.zPressed || this.qPressed || this.sPressed || this.dPressed) {
-                        this.walk(this.walkSpeed);
-                        this.walkSound();
-                        prevMovementState = CharacterState.Walk; // Update previous movement state
-                    }
-
-                    if (prevMovementState === CharacterState.AimWalk || prevMovementState === CharacterState.AimIdle) {
-                        // Only transition to aim-related states if the right click is pressed
-                        if (this.rightClickPressed) {
-                            this.changeState(CharacterState.AimWalk);
-                            prevAimState = CharacterState.AimWalk; // Update previous aim state
-                        } else {
-                            this.changeState(CharacterState.Idle);
-                            prevAimState = CharacterState.Idle; // Update previous aim state
-                        }
-                    }
-                    break;
             }
         });
 
         // Mouse events
         this._scene.onPointerObservable.add((pointerInfo) => {
+            if (this.examiningObject) {
+                return; // Sortir de la fonction pour désactiver les interactions
+            }
             switch (pointerInfo.type) {
                 case PointerEventTypes.POINTERDOWN:
                     if (pointerInfo.event.button === 0) {
@@ -365,7 +393,6 @@ export class FPSController {
     }
 
     /**
-     * Launch the animation
      * @param speed velocity of the player
      * @param animation launch this animation
      */
@@ -394,52 +421,59 @@ export class FPSController {
 
     //left click to fire, right click to aim, ammo managed bellow too
     private fire() {
-        var zombie = this._enemy;
-        var origin = this._camera.position;
-        if (FPSController._ammo > 0) {
-            FPSController._ammo -= 1;
-            //this.gunMuzzleFlash();
-            this._weaponSound.play(); //sound
-            var forward = new Vector3(0, 0, 1);
-            forward = this.vecToLocal(forward, this._camera);
+        if (this._cooldown_time / 60 >= this._cooldown_fire) {
+            var zombie = this._enemy;
+            var origin = this._camera.position;
+            if (FPSController._ammo > 0) {
+                FPSController._ammo -= 1;
+                this._weaponSound.play(); // sound
+                var forward = new Vector3(0, 0, 1);
+                forward = this.vecToLocal(forward, this._camera);
 
-            var direction = forward.subtract(origin);
-            direction = Vector3.Normalize(direction);
+                var direction = forward.subtract(origin);
+                direction = Vector3.Normalize(direction);
 
-            var length = 1000;
+                var length = 1000;
 
-            var ray = new Ray(origin, direction, length);
+                var ray = new Ray(origin, direction, length);
 
-            var hit = this._scene.pickWithRay(ray);
+                var hit = this._scene.pickWithRay(ray);
 
-            //animation
-            //set animation
-            if (!this.rightClickPressed) {
-                this.changeState(CharacterState.Fire);
-            }
-            else {
-                this.changeState(CharacterState.AimShot);
-            }
+                // Set animation to "fire" if it's not already playing
+                if (this._currentAnim !== this._fire) {
+                    this.changeState(CharacterState.Fire);
+                }
 
-            for (let i = 0; i < this._zMeshes.length; i++) {
-                if (hit.pickedMesh.name == this._zMeshes[i]) {
-                    switch (this._zMeshes[i]) {
-                        case "skeletonZombie":
-                            this._boss.getHit(this._damage);
-                            break;
-                        case "parasiteZombie":
-                            this._mutant.getHit(this._damage);
-                            break;
-                        case "Ch10_primitive0" || "Ch10_primitive1":
-                            this._zombie.getHit(this._damage);
+                for (let i = 0; i < this._zMeshes.length; i++) {
+                    if (hit.pickedMesh.name == this._zMeshes[i]) {
+                        switch (this._zMeshes[i]) {
+                            case "skeletonZombie":
+                                this._boss.getHit(this._damage);
+                                break;
+                            case "parasiteZombie":
+                                this._mutant.getHit(this._damage);
+                                break;
+                            case "Ch10_primitive0" || "Ch10_primitive1":
+                                this._zombie.getHit(this._damage);
+                        }
                     }
                 }
+            } else {
+                this.reload();
             }
-        }
-        else {
-            this.reload();
+
+            // Set the flag to prevent other animations from playing
+            this.isFiring = true;
+
+            // Wait for a short delay before resetting the flag
+            setTimeout(() => {
+                this.isFiring = false;
+            }, 1000); // Adjust the delay as needed
         }
     }
+
+
+
 
     private reload() {
         this._empty_ammo.play();
@@ -555,7 +589,7 @@ export class FPSController {
         result.meshes[0].scaling = new Vector3(1, 1, -1);
 
         //audio effect 
-        this._weaponSound = new Sound("pistolsound", "sounds/pistol.mp3", this._scene);
+        this._weaponSound = new Sound("pistolsound", "sounds/whoosh.mp3", this._scene);
         this._reloadSound = new Sound("pistolsoundreload", "sounds/pistol-reload.mp3", this._scene);
 
         //animations
@@ -571,7 +605,7 @@ export class FPSController {
         this._start.loopAnimation = false;
 
         //shooting part
-        this._cooldown_fire = 0.2;
+        this._cooldown_fire = 0.1;
         this._damage = 15;
         FPSController._ammo = 10;
         FPSController._max_ammo = 10;
@@ -728,7 +762,7 @@ export class FPSController {
                 return this._aim_idle;
         }
     }
-    
+
 
     private createTransitionAnimation(currentAnim: AnimationGroup, newAnim: AnimationGroup): AnimationGroup {
         // Create a transition animation that blends between the last frame of the current animation and the first frame of the new animation
@@ -744,7 +778,7 @@ export class FPSController {
         transitionAnim.addTargetedAnimation(transitionAnimation, this._weapon);
         transitionAnim.normalize(0, 1);
         transitionAnim.loopAnimation = false;
-    
+
         return transitionAnim;
     }
 
@@ -752,22 +786,163 @@ export class FPSController {
         // Get the current and new animations
         const currentAnim = this.getAnimationGroup(currentState);
         const newAnim = this.getAnimationGroup(newState);
-    
+
         // Stop the current animation
         currentAnim.stop();
-    
+
         // Create a transition animation
         const transitionAnim = this.createTransitionAnimation(currentAnim, newAnim);
-    
+
         // Play the transition animation, then the new animation
         transitionAnim.onAnimationEndObservable.addOnce(() => {
             newAnim.play();
         });
         transitionAnim.play();
-    
+
         // Update the current state
         currentState = newState;
     }
+
+    private initialPosition: Vector3 = null;
+    private lastParentName: string = null;
+
+    private handleInteraction(): void {
+        this._scene.onKeyboardObservable.add((kbInfo) => {
+            if (kbInfo.type === KeyboardEventTypes.KEYDOWN && kbInfo.event.key === 'e') {
+                if (this.examiningObject) {
+                    // If already examining an object, put it back to its initial position
+                    this.examiningObjectMesh.parent = this._scene.getTransformNodeByName(this.lastParentName);
+                    this.examiningObjectMesh.position = this.initialPosition;
+                    this.examiningObject = false;
+
+                    // Hide the examination HUD
+                    document.getElementById("examination-hud").style.display = "none";
+
+                    // Unlock the pointer and show the cursor
+                    document.exitPointerLock();
+                } else {
+                    // Calculate the forward direction from the camera
+                    const forward = this._camera.getForwardRay().direction;
+
+                    // Create a ray from the camera position in the forward direction
+                    const ray = new Ray(this._camera.position, forward);
+
+                    // Perform a raycast to check for intersections with objects in the scene
+                    const pickInfo = this._scene.pickWithRay(ray);
+
+                    // Check if an object was picked
+                    if (pickInfo.hit) {
+                        const pickedObject = pickInfo.pickedMesh;
+                        this.examiningObjectMesh = pickedObject;
+                        this.initialPosition = pickedObject.position.clone();
+                        this.lastParentName = pickedObject.parent.name;
+
+                        // Perform the desired interaction with the picked object
+                        this.examineObject(pickedObject);
+                        this.moveObject(pickedObject);
+
+                        // Show the examination HUD
+                        document.getElementById("examination-hud").style.display = "block";
+
+                        // Lock the pointer and hide the cursor
+                        this._canvas.requestPointerLock();
+                        this.examiningObject = true;
+                    }
+                }
+            }
+        });
+    }
+
+
+    private examineObject(object: AbstractMesh): void {// Calculate the new position for the object based on the camera's position and direction
+        // Calculate the new position for the object based on the camera's position and direction
+        const distance = 1.5; // Distance from the camera to the object (adjust as needed)
+        const offset = this._camera.getForwardRay().direction.scale(-distance); // Offset vector from the camera
+        const newPosition = this._camera.position.add(offset);
+
+        // Apply the object's scaling to the distance
+        const scaledDistance = distance / object.scaling.length();
+
+        // Set the new position for the object
+        object.position.copyFrom(newPosition).normalize().scaleInPlace(scaledDistance);
+
+        // Make the object a child of the camera during examination
+        object.parent = this._camera;
+
+        this.examiningObject = true;
+    }
+
+    private moveObject(object: AbstractMesh): void {
+        // Enable pointer events for the canvas
+        this._canvas.style.pointerEvents = "all";
     
+        // Lock the pointer and hide the cursor when clicking on the canvas
+        this._canvas.addEventListener("click", () => {
+            this._canvas.requestPointerLock();
+        });
     
+        // Add pointer event listeners for mouse movement
+        this._canvas.addEventListener("mousemove", (event) => {
+            // Check if the pointer is locked and if the object is being examined
+            if (document.pointerLockElement === this._canvas && this.examiningObject) {
+                // Perform rotation based on the mouse movement
+                object.rotation.y += event.movementX * 0.01; // Adjust rotation speed as needed
+                object.rotation.x += event.movementY * 0.01;; // Adjust rotation speed as needed
+            }
+        });
+    
+        // Release the pointer lock and show the cursor when pressing escape
+        document.addEventListener("pointerlockchange", () => {
+            if (document.pointerLockElement !== this._canvas) {
+                this._canvas.style.cursor = "auto";
+            } else {
+                this._canvas.style.cursor = "none";
+            }
+        });
+    }
+    
+
+    private createExaminationHUD(): void {
+        // Create the HUD element if it does not exist
+        // Create the HUD element if it does not exist
+        // Create the HUD element if it does not exist
+        var hud = document.getElementById("examination-hud");
+        if (!hud) {
+            hud = document.createElement("div");
+
+            // Assign the id
+            hud.id = "examination-hud";
+
+            // Set the initial style
+            hud.style.display = "none";
+            hud.style.position = "fixed";
+            hud.style.top = "0";
+            hud.style.left = "0";
+            hud.style.width = "100%";
+            hud.style.height = "100%";
+            hud.style.background = "none"; // Remove the dark background
+            hud.style.color = "white";
+            hud.style.fontSize = "2em";
+            hud.style.padding = "1em";
+            hud.style.boxSizing = "border-box";
+            hud.style.overflowY = "auto";
+            hud.style.border = "2px solid red"; // Add an eerie red border
+
+            // Set the initial content with horror-themed style and icons
+            hud.innerHTML = `
+    <h1 style="text-align: center; font-size: 2.5em; font-family: 'Horror Font', cursive;">Examination</h1>
+    <p style="font-family: 'Horror Font', cursive;">Object details...</p>
+    <div style="text-align: center;">
+  `;
+
+            // Add the HUD to the body
+            document.body.appendChild(hud);
+        }
+
+
+    }
+
+
+
+
 }

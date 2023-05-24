@@ -1,10 +1,12 @@
-import { Animation, Tools, RayHelper, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
+import { Animation, Tools, RayHelper, EasingFunction, CannonJSPlugin, PhysicsImpostor,IAnimationKey, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
 import { float } from "babylonjs";
 import { Boss } from "./Boss";
 import { Enemy } from "./Enemy";
 import { Mutant } from "./Mutant";
 import { PlayerHealth } from "./PlayerHealth";
 import { Zombie } from "./Zombie";
+import * as cannon from 'cannon';
+
 
 enum CharacterState {
     End,
@@ -84,10 +86,12 @@ export class FPSController {
     private rightClickPressed = false;
     private reloadPressed = false;
 
+
     //examining object 
     private examiningObject: boolean = false;
     private examiningObjectMesh: AbstractMesh;
     private InteractiveObject: TransformNode;
+    private oil: AbstractMesh;
 
     // firing animation flag
     private isFiring: boolean = false;
@@ -95,6 +99,8 @@ export class FPSController {
     //speed
     public walkSpeed = 1;
     public runSpeed = 1.4;
+
+
 
     //soon an Array of Enemy instead of a simple zombie
     constructor(scene: Scene, canvas: HTMLCanvasElement, enemy: Enemy, mutant: Mutant, boss: Boss, zombie: Zombie) {
@@ -105,6 +111,10 @@ export class FPSController {
         this._mutant = mutant;
         this._boss = boss;
         this.InteractiveObject = scene.getTransformNodeByName("InteractiveObject");
+        // Add physics imposter to the mesh
+        //this.oil = scene.getMeshByName("oil");
+        //this.oil.physicsImpostor = new PhysicsImpostor(this.oil, PhysicsImpostor.BoxImpostor, { mass: 1 }, scene);
+
         this.createPistol();
         this.createController();
         this.InitCameraKeys();
@@ -114,6 +124,10 @@ export class FPSController {
         this.handleInteraction()
         this.createExaminationHUD()
         this.update();
+        // Enable physics engine
+        var physicsPlugin = new CannonJSPlugin(true, 10, cannon);
+        scene.enablePhysics(new Vector3(0, -9.81, 0), physicsPlugin);
+
         this.i = 0;
         this._cooldown_time = 0;
         this._flashlightSound = new Sound("flashlightSound", "sounds/flashlight.mp3", this._scene);
@@ -161,8 +175,6 @@ export class FPSController {
                     if (!this.zPressed && !this.qPressed && !this.sPressed && !this.dPressed) {
                         this.changeState(CharacterState.Idle);
                         this.stopwalkSound();
-                        prevMovementState = CharacterState.Idle; // Update previous movement state
-                        this.transitionToState(CharacterState.Idle); // Transition to idle animation
                     }
 
                     if (!this.shiftPressed) {
@@ -189,12 +201,8 @@ export class FPSController {
                         // Only transition to aim-related states if the right click is pressed
                         if (this.rightClickPressed) {
                             this.changeState(CharacterState.AimWalk);
-                            prevAimState = CharacterState.AimWalk; // Update previous aim state
-                            this.transitionToState(CharacterState.AimWalk); // Transition to aim walk animation
                         } else {
                             this.changeState(CharacterState.Idle);
-                            prevAimState = CharacterState.Idle; // Update previous aim state
-                            this.transitionToState(CharacterState.Idle); // Transition to idle animation
                         }
                     }
                 }
@@ -817,28 +825,6 @@ export class FPSController {
         return transitionAnim;
     }
 
-    private transitionToState(newState: CharacterState) {
-        // Get the current and new animations
-        const currentAnim = this.getAnimationGroup(currentState);
-        const newAnim = this.getAnimationGroup(newState);
-
-        // Stop the current animation
-        currentAnim.stop();
-
-        // Create a transition animation
-        const transitionAnim = this.createTransitionAnimation(currentAnim, newAnim);
-
-        // Play the transition animation, then the new animation
-        transitionAnim.onAnimationEndObservable.addOnce(() => {
-            newAnim.play();
-        });
-        transitionAnim.play();
-
-        // Update the current state
-        currentState = newState;
-    }
-
-
     private initialPosition: Vector3 = null;
     private lastParentName: string = null;
     // Add these properties to your class
@@ -884,14 +870,6 @@ export class FPSController {
 
                     // Check if an object was picked
                     if (pickInfo.hit) {
-                        // Calculate the forward direction from the camera
-                        const forward = this._camera.getForwardRay().direction;
-
-                        // Create a ray from the camera position in the forward direction
-                        const ray = new Ray(this._camera.position, forward);
-
-                        // Perform a raycast to check for intersections with objects in the scene
-                        const pickInfo = this._scene.pickWithRay(ray);
 
                         // Check if an object was picked and if it can be examined
                         if (pickInfo && pickInfo.hit && this.canExamineObject(pickInfo.pickedMesh)) {
@@ -915,112 +893,226 @@ export class FPSController {
                             // Disable camera movement
                             this.disableCameraMovement();
                         }
+
+                        if (pickInfo && pickInfo.hit && this.canExamineDrawer(pickInfo.pickedMesh)) {
+                            if (!pickInfo.pickedMesh.name.includes("ChestOfDrawers_mesh") && !pickInfo.pickedMesh.name.includes("ChestOfDrawers_mesh.001") && !pickInfo.pickedMesh.name.includes("ChestOfDrawers_mesh.002")) {
+                                const pickedObject = pickInfo.pickedMesh;
+                                console.log(pickedObject.name);
+                                if (this.isOpen) {
+                                    this.closeChestOfDrawers(pickedObject);
+                                } else {
+                                    this.openChestOfDrawers(pickedObject);
+                                }
+                            }
+                        }
                     }
                 }
             }
         });
     }
 
+    private isAnimating = false;
+    private isOpen = false;
+
+    private openChestOfDrawers(pickedObject: AbstractMesh) {
+        if (this.isAnimating) {
+            return; // Si une animation est déjà en cours, ne commencez pas une nouvelle animation
+        }
+
+        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const initialX = pickedObject.position.x; // Position initiale de l'objet
+        const targetX = 1; // Position finale de l'ouverture du tiroir
+
+        // Création de l'animation
+        const animation = new Animation(
+            'positionAnimation', // Nom de l'animation
+            'position.x', // Propriété à animer (position.x)
+            60, // Nombre de frames par seconde
+            Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
+            Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+        );
+
+        // Création de la liste des frames de l'animation
+        const keys: IAnimationKey[] = [
+            { frame: 0, value: initialX }, // Frame initiale
+            { frame: animationDuration, value: targetX } // Frame finale
+        ];
+
+        // Ajout des frames à l'animation
+        animation.setKeys(keys);
+
+        // Attacher l'animation à l'objet
+        pickedObject.animations = [];
+        pickedObject.animations.push(animation);
+
+        // Lancer l'animation
+        this.isAnimating = true;
+        this._scene.beginAnimation(pickedObject, 0, animationDuration, false).onAnimationEnd = () => {
+            this.isAnimating = false;
+            this.isOpen = true;
+        };
+    }
+
+    private closeChestOfDrawers(pickedObject: AbstractMesh) {
+        if (this.isAnimating) {
+            return; // Si une animation est déjà en cours, ne commencez pas une nouvelle animation
+        }
+
+        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const initialX = pickedObject.position.x; // Position initiale de l'objet
+        const targetX = 0.2; // Position finale de la fermeture du tiroir
+
+        // Création de l'animation
+        const animation = new Animation(
+            'positionAnimation', // Nom de l'animation
+            'position.x', // Propriété à animer (position.x)
+            60, // Nombre de frames par seconde
+            Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
+            Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+        );
+
+        // Création de la liste des frames de l'animation
+        const keys: IAnimationKey[] = [
+            { frame: 0, value: initialX }, // Frame initiale
+            { frame: animationDuration, value: targetX } // Frame finale
+        ];
+
+        // Ajout des frames à l'animation
+        animation.setKeys(keys);
+
+        // Attacher l'animation à l'objet
+        pickedObject.animations = [];
+        pickedObject.animations.push(animation);
+
+        // Lancer l'animation
+        this.isAnimating = true;
+        this._scene.beginAnimation(pickedObject, 0, animationDuration, false).onAnimationEnd = () => {
+            this.isAnimating = false;
+            this.isOpen = false;
+        };
+    }
+
+
+
     private mouseMoveListener: (event: MouseEvent) => void = null;
 
     private examineObject(object: AbstractMesh): void {// Calculate the new position for the object based on the camera's position and direction
-    // hide the hands
-    this.firstChild = this._camera.getChildren(node => node.name === "__root__")[0];
-    this.firstChild.setEnabled(false);
-    // Make the object a child of the camera during examination
-    object.parent = this._camera;
-    object.position = new Vector3(0, 0, 0.5);
-    object.scaling.z =  Math.abs(object.scaling.z) * -1;
+        // hide the hands
+        this.firstChild = this._camera.getChildren(node => node.name === "__root__")[0];
+        this.firstChild.setEnabled(false);
+        // Make the object a child of the camera during examination
+        object.parent = this._camera;
+        object.position = new Vector3(0, 0, 0.5);
+        object.scaling.z = Math.abs(object.scaling.z) * -1;
 
-    this.examiningObject = true;
-}
-
-    private moveObject(object: AbstractMesh): void {
-    // Enable pointer events for the canvas
-    this._canvas.style.pointerEvents = "all";
-
-    // Add pointer event listeners for mouse movement
-    const mouseMoveListener = (event: MouseEvent) => {
-        // Check if the pointer is locked and if the object is being examined
-        if (document.pointerLockElement === this._canvas && this.examiningObject) {
-            // Perform rotation based on the mouse movement
-            object.rotate(Axis.Y, event.movementX * 0.01, Space.WORLD);
-            object.rotate(Axis.X, event.movementY * 0.01, Space.WORLD);
-            console.log(object.rotation.x);
-            console.log(object.rotation.y);
-            console.log(object.name);
-            console.log(object);
-
-        }
-    };
-
-    this.mouseMoveListener = mouseMoveListener;
-    this._canvas.addEventListener("mousemove", mouseMoveListener);
-
-}
-
-    private canExamineObject(object: AbstractMesh): boolean {
-        console.log(object.name);
-    let parent = object.parent;
-
-    // Iterate through the parents up to three levels
-    for (let i = 0; i < 2; i++) {
-        if (!parent || !parent.name) {
-            // No more parents to check, exit the loop
-            break;
-        }
-
-        // Check if the parent's name is in the allowed list
-        if (["Examine", "Interact", "Items", "Lamps"].includes(parent.name)) {
-            return true;
-        }
-
-        // Move up to the next parent
-        parent = parent.parent;
+        this.examiningObject = true;
     }
 
-    // None of the parents have an allowed name, cannot examine the object
-    return false;
-}
+    private moveObject(object: AbstractMesh): void {
+        // Enable pointer events for the canvas
+        this._canvas.style.pointerEvents = "all";
+
+        // Add pointer event listeners for mouse movement
+        const mouseMoveListener = (event: MouseEvent) => {
+            // Check if the pointer is locked and if the object is being examined
+            if (document.pointerLockElement === this._canvas && this.examiningObject) {
+                // Perform rotation based on the mouse movement
+                object.rotate(Axis.Y, event.movementX * 0.01, Space.WORLD);
+                object.rotate(Axis.X, event.movementY * 0.01, Space.WORLD);
+
+            }
+        };
+
+        this.mouseMoveListener = mouseMoveListener;
+        this._canvas.addEventListener("mousemove", mouseMoveListener);
+
+    }
+
+    private canExamineObject(object: AbstractMesh): boolean {
+        let parent = object.parent;
+
+        // Iterate through the parents up to three levels
+        for (let i = 0; i < 2; i++) {
+            if (!parent || !parent.name) {
+                // No more parents to check, exit the loop
+                break;
+            }
+
+            // Check if the parent's name is in the allowed list
+            if (["Examine", "Interact", "Items", "Lamps"].includes(parent.name)) {
+                return true;
+            }
+
+            // Move up to the next parent
+            parent = parent.parent;
+        }
+
+        // None of the parents have an allowed name, cannot examine the object
+        return false;
+    }
+
+    private canExamineDrawer(object: AbstractMesh): boolean {
+        console.log(object.name);
+        let parent = object.parent;
+
+        // Iterate through the parents up to three levels
+        for (let i = 0; i < 2; i++) {
+            if (!parent || !parent.name) {
+                // No more parents to check, exit the loop
+                break;
+            }
+
+            // Check if the parent's name is in the allowed list
+            if (["ChestOfDrawers", "ChestOfDrawers.001", "ChestOfDrawers.002"].includes(parent.name)) {
+                return true;
+            }
+
+            // Move up to the next parent
+            parent = parent.parent;
+        }
+
+        // None of the parents have an allowed name, cannot examine the object
+        return false;
+    }
 
 
     private createExaminationHUD(): void {
-    // Create the HUD element if it does not exist
-    var hud = document.getElementById("examination-hud");
-    if(!hud) {
-        hud = document.createElement("div");
+        // Create the HUD element if it does not exist
+        var hud = document.getElementById("examination-hud");
+        if (!hud) {
+            hud = document.createElement("div");
 
-        // Assign the id
-        hud.id = "examination-hud";
+            // Assign the id
+            hud.id = "examination-hud";
 
-        // Set the initial style
-        hud.style.display = "none";
-        hud.style.position = "fixed";
-        hud.style.top = "0";
-        hud.style.left = "0";
-        hud.style.width = "100%";
-        hud.style.height = "100%";
-        hud.style.background = "none"; // Remove the dark background
-        hud.style.color = "white";
-        hud.style.fontSize = "2em";
-        hud.style.padding = "1em";
-        hud.style.boxSizing = "border-box";
-        hud.style.overflowY = "auto";
-        hud.style.border = "2px solid red"; // Add an eerie red border
+            // Set the initial style
+            hud.style.display = "none";
+            hud.style.position = "fixed";
+            hud.style.top = "0";
+            hud.style.left = "0";
+            hud.style.width = "100%";
+            hud.style.height = "100%";
+            hud.style.background = "none"; // Remove the dark background
+            hud.style.color = "white";
+            hud.style.fontSize = "2em";
+            hud.style.padding = "1em";
+            hud.style.boxSizing = "border-box";
+            hud.style.overflowY = "auto";
+            hud.style.border = "2px solid red"; // Add an eerie red border
 
-        // Set the initial content with horror-themed style and icons
-        hud.innerHTML = `
+            // Set the initial content with horror-themed style and icons
+            hud.innerHTML = `
     <h1 style="text-align: center; font-size: 2.5em; font-family: 'Horror Font', cursive;">Examination</h1>
     <p style="font-family: 'Horror Font', cursive;">Object details...</p>
     <div style="text-align: center;">
   `;
 
-        // Add the HUD to the body
-        document.body.appendChild(hud);
+            // Add the HUD to the body
+            document.body.appendChild(hud);
+        }
+
+
     }
-
-
-}
 
 
 

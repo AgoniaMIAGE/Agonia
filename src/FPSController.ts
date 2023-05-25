@@ -1,4 +1,4 @@
-import { Animation, Tools, RayHelper, EasingFunction, CannonJSPlugin, PhysicsImpostor,IAnimationKey, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
+import { Animation, Tools, RayHelper, EasingFunction, CannonJSPlugin, IAnimationKey, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
 import { float } from "babylonjs";
 import { Boss } from "./Boss";
 import { Enemy } from "./Enemy";
@@ -54,6 +54,10 @@ export class FPSController {
     private _hurt: Sound;
     private _empty_ammo: Sound;
     private _reloadSound: Sound;
+    private _openDoorSound: Sound;
+    private _keySound: Sound;
+    private _doorunlockSound: Sound;
+    private _lockedSound: Sound;
 
     //headLight
     private _light: SpotLight;
@@ -86,12 +90,28 @@ export class FPSController {
     private rightClickPressed = false;
     private reloadPressed = false;
 
+    //door
+    private canOpenDoor1: boolean = true;
+    private canOpenDoor2: boolean = false;
+    private canOpenDoor3: boolean = false;
+    private canOpenDoor4: boolean = false;
+
+    //swap weapons
+    private isMeleeWeapon: boolean = false;
+    private canFire: boolean = false;
+    private _candle: AbstractMesh;
+    private _flashlight: AbstractMesh;
+    private _lantern: AbstractMesh;
+    private _pistol: AbstractMesh;
+    private _rifle: AbstractMesh;
+    private allWeapons: AbstractMesh[] = [];
+
 
     //examining object 
     private examiningObject: boolean = false;
     private examiningObjectMesh: AbstractMesh;
     private InteractiveObject: TransformNode;
-    private oil: AbstractMesh;
+    public oil: AbstractMesh;
 
     // firing animation flag
     private isFiring: boolean = false;
@@ -111,11 +131,8 @@ export class FPSController {
         this._mutant = mutant;
         this._boss = boss;
         this.InteractiveObject = scene.getTransformNodeByName("InteractiveObject");
-        // Add physics imposter to the mesh
-        //this.oil = scene.getMeshByName("oil");
-        //this.oil.physicsImpostor = new PhysicsImpostor(this.oil, PhysicsImpostor.BoxImpostor, { mass: 1 }, scene);
-
-        this.createPistol();
+        this.createAllWeapons();
+        this.createCandle();
         this.createController();
         this.InitCameraKeys();
         this.keyboardInput();
@@ -124,9 +141,6 @@ export class FPSController {
         this.handleInteraction()
         this.createExaminationHUD()
         this.update();
-        // Enable physics engine
-        var physicsPlugin = new CannonJSPlugin(true, 10, cannon);
-        scene.enablePhysics(new Vector3(0, -9.81, 0), physicsPlugin);
 
         this.i = 0;
         this._cooldown_time = 0;
@@ -146,9 +160,13 @@ export class FPSController {
             autoplay: false,
             volume: 0.3
         });
-        this._empty_ammo = new Sound("emptyammo", "sounds/emptyammo.mp3", this._scene);
+        //this._empty_ammo = new Sound("emptyammo", "sounds/emptyammo.mp3", this._scene);
         this._playerHealth = new PlayerHealth(this._scene, this._weapon, 200);
-        this._reloadSound = new Sound("pistolsoundreload", "sounds/pistol-reload.mp3", this._scene);
+        //this._reloadSound = new Sound("pistolsoundreload", "sounds/pistol-reload.mp3", this._scene);
+        this._openDoorSound = new Sound("dooropen", "sounds/dooropen.mp3", this._scene);
+        this._keySound = new Sound("key", "sounds/key.mp3", this._scene);
+        this._doorunlockSound = new Sound("doorunlock", "sounds/doorunlock.mp3", this._scene);
+        this._lockedSound = new Sound("locked", "sounds/locked.mp3", this._scene);
     }
     /**
      * launched every 60ms 
@@ -210,6 +228,7 @@ export class FPSController {
         });
     }
 
+
     /**
      * create the camera which represents the player (FPS)
      */
@@ -222,7 +241,7 @@ export class FPSController {
         this._camera.checkCollisions = true;
 
         //define the camera as player (on his hitbox)
-        this._camera.ellipsoid = new Vector3(1, 1.1, 1);
+        this._camera.ellipsoid = new Vector3(0.7, 1, 0.7);
 
         //Movements
         this.InitCameraKeys();
@@ -281,19 +300,17 @@ export class FPSController {
     private i: int;
 
     // Weapon upgrades
-    private swap(lastWeapon: AbstractMesh): void {
-        lastWeapon.dispose();
-        switch (this.i) {
-            case 0:
-                this.createShotgun();
-                this.i++;
+    private swap(lastWeapon: AbstractMesh, i: string): void {
+        lastWeapon.setEnabled(false);
+        switch (i) {
+            case "flashlight":
+                this.createFlashlight();
                 break;
-            case 1:
-                this.createScar();
-                this.i++;
+            case "pistol":
+                this.createCandle();
                 break;
-            case 2:
-                this.createSniper();
+            case "lantern":
+                this.createLantern();
                 break;
         }
     }
@@ -398,9 +415,7 @@ export class FPSController {
         await Tools.DelayAsync(1000);
         FPSController._ammo = FPSController._max_ammo;
     }
-    public changeWeapon() {
-        this.swap(this._weapon);
-    }
+
 
     private walkSound() {
         if (!this._walkSound.isPlaying) {
@@ -413,12 +428,6 @@ export class FPSController {
             this._walkSound.stop();
     }
 
-    //Anims Check to return to Idle
-    private allUnpressed() {
-        if (!this.zPressed && !this.qPressed && !this.sPressed && !this.dPressed) {
-            this.walk(0);
-        }
-    }
     /**
      * create the flashlight
      */
@@ -464,45 +473,47 @@ export class FPSController {
 
     //left click to fire, right click to aim, ammo managed bellow too
     private fire() {
-        if (this._cooldown_time / 60 >= this._cooldown_fire) {
-            var zombie = this._enemy;
-            var origin = this._camera.position;
-            if (FPSController._ammo > 0) {
-                FPSController._ammo -= 1;
-                this._weaponSound.play(); // sound
-                var forward = new Vector3(0, 0, 1);
-                forward = this.vecToLocal(forward, this._camera);
+        if (this.canFire && !this.isMeleeWeapon) {
+            if (this._cooldown_time / 60 >= this._cooldown_fire) {
+                var zombie = this._enemy;
+                var origin = this._camera.position;
+                if (FPSController._ammo > 0) {
+                    FPSController._ammo -= 1;
+                    this._weaponSound.play(); // sound
+                    var forward = new Vector3(0, 0, 1);
+                    forward = this.vecToLocal(forward, this._camera);
 
-                var direction = forward.subtract(origin);
-                direction = Vector3.Normalize(direction);
+                    var direction = forward.subtract(origin);
+                    direction = Vector3.Normalize(direction);
 
-                var length = 1000;
+                    var length = 1000;
 
-                var ray = new Ray(origin, direction, length);
+                    var ray = new Ray(origin, direction, length);
 
-                var hit = this._scene.pickWithRay(ray);
+                    var hit = this._scene.pickWithRay(ray);
 
-                // Set animation to "fire" if it's not already playing
-                if (this._currentAnim !== this._fire) {
-                    this.changeState(CharacterState.Fire);
-                }
+                    // Set animation to "fire" if it's not already playing
+                    if (this._currentAnim !== this._fire) {
+                        this.changeState(CharacterState.Fire);
+                    }
 
-                for (let i = 0; i < this._zMeshes.length; i++) {
-                    if (hit.pickedMesh.name == this._zMeshes[i]) {
-                        switch (this._zMeshes[i]) {
-                            case "skeletonZombie":
-                                this._boss.getHit(this._damage);
-                                break;
-                            case "parasiteZombie":
-                                this._mutant.getHit(this._damage);
-                                break;
-                            case "Ch10_primitive0" || "Ch10_primitive1":
-                                this._zombie.getHit(this._damage);
+                    for (let i = 0; i < this._zMeshes.length; i++) {
+                        if (hit.pickedMesh.name == this._zMeshes[i]) {
+                            switch (this._zMeshes[i]) {
+                                case "skeletonZombie":
+                                    this._boss.getHit(this._damage);
+                                    break;
+                                case "parasiteZombie":
+                                    this._mutant.getHit(this._damage);
+                                    break;
+                                case "Ch10_primitive0" || "Ch10_primitive1":
+                                    this._zombie.getHit(this._damage);
+                            }
                         }
                     }
+                } else {
+                    this.reload();
                 }
-            } else {
-                this.reload();
             }
 
             // Set the flag to prevent other animations from playing
@@ -522,50 +533,103 @@ export class FPSController {
         this._empty_ammo.play();
     }
 
-    //Scar and its variables/stats
-    private async createScar(): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "scar.glb", this._scene);
+    private async createAllWeapons(): Promise<any> {
+        await this.createWeapon1();
+        await this.createWeapon2();
+        await this.createweapon3();
 
+        // Désactiver toutes les armes
+        for (const weapon of this.allWeapons) {
+            weapon.setEnabled(false);
+        }
+
+        // Activer la première arme (candle dans cet exemple)
+        this.allWeapons[0].setEnabled(true);
+        this._weapon = this.allWeapons[0];
+    }
+
+
+    private async createWeapon1(): Promise<any> {
+        const result = await SceneLoader.ImportMeshAsync("", "./models/", "candle.glb", this._scene);
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
         env.parent = this._camera;
-        this._weapon = env;
-        for (let i = 1; i < 4; i++) {
-            result.meshes[i].renderingGroupId = 2;
-        }
+        this.allWeapons.push(env);
         result.meshes[0].position = new Vector3(0, -1.7, 0.2);
         result.meshes[0].rotation = new Vector3(0, 0, 0);
         result.meshes[0].scaling = new Vector3(1, 1, -1);
 
-        //audio effect 
-        this._weaponSound = new Sound("scarsound", "sounds/scarshot.mp3", this._scene);
-        this._reloadSound = new Sound("scarsoundreload", "sounds/scar-reload.mp3", this._scene);
         //animations
-        this._end = this._scene.getAnimationGroupByName("Hands_Automatic_rifle.Hide");
-        this._fire = this._scene.getAnimationGroupByName("Hands_Automatic_rifle.Singl_Shot");
-        this._idle = this._scene.getAnimationGroupByName("Hands_Automatic_rifle.Idle");
-        this._reload = this._scene.getAnimationGroupByName("Hands_Automatic_rifle.Recharge");
-        this._run = this._scene.getAnimationGroupByName("Hands_Automatic_rifle.Run");
-        this._start = this._scene.getAnimationGroupByName("Hands_Automatic_rifle.Get");
-        this._walk = this._scene.getAnimationGroupByName("Hands_Automatic_rifle.Walk");
-        this._aim_walk = this._scene.getAnimationGroupByName("Hands_Automatic_rifle.Aiming_Walk");
-        this._aim_shot = this._scene.getAnimationGroupByName("Hands_Automatic_rifle.Aiming_Shot");
-        this._aim_idle = this._scene.getAnimationGroupByName("Hands_Automatic_rifle.Aiming_Idle");
+        this._end = this._scene.getAnimationGroupByName("Candle.Hide");
+        this._idle = this._scene.getAnimationGroupByName("Candle.Idle");
+        this._run = this._scene.getAnimationGroupByName("Candle.Run");
+        this._start = this._scene.getAnimationGroupByName("Candle.Get");
+        this._walk = this._scene.getAnimationGroupByName("Candle.Walk");
         this._run.loopAnimation = true;
         this._idle.loopAnimation = true;
         this._walk.loopAnimation = true;
-        this._aim_walk.loopAnimation = true;
+        this._start.loopAnimation = false;
+        this._end.loopAnimation = false;
 
-        //shooting part
-        this._cooldown_fire = 0.15;
-        this._damage = 25;
-        FPSController._ammo = 30;
-        FPSController._max_ammo = 30;
 
         return {
             mesh: env as Mesh,
             animationGroups: result.animationGroups
         }
+    }
+
+    private async createWeapon2(): Promise<any> {
+        const result = await SceneLoader.ImportMeshAsync("", "./models/", "flashlight.glb", this._scene);
+
+        let env = result.meshes[0];
+        let allMeshes = env.getChildMeshes();
+        env.parent = this._camera;
+        this.allWeapons.push(env);
+        result.meshes[0].position = new Vector3(0, -1.7, 0.2);
+        result.meshes[0].rotation = new Vector3(0, 0, 0);
+        result.meshes[0].scaling = new Vector3(1, 1, -1);
+
+        return {
+            mesh: env as Mesh,
+            animationGroups: result.animationGroups
+        }
+    }
+
+    private async createweapon3(): Promise<any> {
+        const result = await SceneLoader.ImportMeshAsync("", "./models/", "lantern.glb", this._scene);
+
+        let env = result.meshes[0];
+        let allMeshes = env.getChildMeshes();
+        env.parent = this._camera;
+        this.allWeapons.push(env);
+        result.meshes[0].position = new Vector3(0, -1.7, 0.2);
+        result.meshes[0].rotation = new Vector3(0, 0, 0);
+        result.meshes[0].scaling = new Vector3(1, 1, -1);
+
+
+        return {
+            mesh: env as Mesh,
+            animationGroups: result.animationGroups
+        }
+    }
+
+
+    //Scar and its variables/stats
+    private async createCandle(): Promise<any> {
+        this.isMeleeWeapon = false;
+        this.canFire = false;
+
+        // Désactiver toutes les armes
+        if (this.allWeapons.length > 0) {
+            for (const weapon of this.allWeapons) {
+                weapon.setEnabled(false);
+            }
+
+            // Activer la première arme (candle dans cet exemple)
+            this.allWeapons[0].setEnabled(true);
+            this._weapon = this.allWeapons[0];
+        }
+
     }
 
     //Shotgun and its variables/stats
@@ -617,23 +681,19 @@ export class FPSController {
     }
 
     //Pistol and its variables/stats
-    private async createPistol(): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "pistol.glb", this._scene);
+    private async createFlashlight(): Promise<any> {
 
-        let env = result.meshes[0];
-        let allMeshes = env.getChildMeshes();
-        env.parent = this._camera;
-        this._weapon = env;
-        /*for (let i = 1; i < 9; i++) {
-            result.meshes[i].renderingGroupId = 1;
-        }*/
-        result.meshes[0].position = new Vector3(0, -1.7, 0.2);
-        result.meshes[0].rotation = new Vector3(0, 0, 0);
-        result.meshes[0].scaling = new Vector3(1, 1, -1);
+        this.isMeleeWeapon = true;
+        this.canFire = false;
 
-        //audio effect 
-        this._weaponSound = new Sound("pistolsound", "sounds/whoosh.mp3", this._scene);
-        this._reloadSound = new Sound("pistolsoundreload", "sounds/pistol-reload.mp3", this._scene);
+        // Désactiver toutes les armes
+        for (const weapon of this.allWeapons) {
+            weapon.setEnabled(false);
+        }
+
+        // Activer la première arme (candle dans cet exemple)
+        this.allWeapons[1].setEnabled(true);
+        this._weapon = this.allWeapons[1];
 
         //animations
         this._end = this._scene.getAnimationGroupByName("Hands_Flashlight.HIde");
@@ -646,64 +706,48 @@ export class FPSController {
         this._idle.loopAnimation = true;
         this._walk.loopAnimation = true;
         this._start.loopAnimation = false;
+        this._fire.loopAnimation = false;
+        this._end.loopAnimation = false;
 
-        //shooting part
-        this._cooldown_fire = 0.1;
-        this._damage = 15;
-        FPSController._ammo = 10;
-        FPSController._max_ammo = 10;
+        //audio effect 
+        this._weaponSound = new Sound("attack", "sounds/whoosh.mp3", this._scene);
 
-        return {
-            mesh: env as Mesh,
-            animationGroups: result.animationGroups
-        }
     }
 
 
     //Sniper and its variables/stats
-    private async createSniper(): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "sniper.glb", this._scene);
+    private async createLantern(): Promise<any> {
 
-        let env = result.meshes[0];
-        let allMeshes = env.getChildMeshes();
-        env.parent = this._camera;
-        this._weapon = env;
-        for (let i = 1; i < 9; i++) {
-            result.meshes[i].renderingGroupId = 1;
+        this.isMeleeWeapon = true;
+        this.canFire = false;
+
+        // Désactiver toutes les armes
+        for (const weapon of this.allWeapons) {
+            weapon.setEnabled(false);
         }
-        result.meshes[0].position = new Vector3(0, -1.7, 0.2);
-        result.meshes[0].rotation = new Vector3(0, 0, 0);
-        result.meshes[0].scaling = new Vector3(1, 1, -1);
-        //audio effect 
-        this._weaponSound = new Sound("snipersound", "sounds/snipershot.mp3", this._scene);
-        this._reloadSound = new Sound("snipersoundreload", "sounds/sniper-reload.mp3", this._scene);
+
+        // Activer la première arme (candle dans cet exemple)
+        this.allWeapons[2].setEnabled(true);
+        this._weapon = this.allWeapons[2];
 
         //animations
-        this._end = this._scene.getAnimationGroupByName("Hands_Sniper_Rifle.Hide");
-        this._fire = this._scene.getAnimationGroupByName("Hands_Sniper_Rifle.Shot");
-        this._idle = this._scene.getAnimationGroupByName("Hands_Sniper_Rifle.Idel");
-        this._reload = this._scene.getAnimationGroupByName("Hands_Sniper_Rifle.Recharge");
-        this._run = this._scene.getAnimationGroupByName("Hands_Sniper_Rifle.Run");
-        this._start = this._scene.getAnimationGroupByName("Hands_Sniper_Rifle.Get");
-        this._walk = this._scene.getAnimationGroupByName("Hands_Sniper_Rifle.Walk");
-        this._aim_walk = this._scene.getAnimationGroupByName("Hands_Sniper_Rifle.Aiming_Walk");
-        this._aim_shot = this._scene.getAnimationGroupByName("Hands_Sniper_Rifle.Aiming_Shot");
-        this._aim_idle = this._scene.getAnimationGroupByName("Hands_Sniper_Rifle.Aiming_Idle");
+        this._end = this._scene.getAnimationGroupByName("Flashlight_2.Hide");
+        this._fire = this._scene.getAnimationGroupByName("Flashlight_2.Attack");
+        this._idle = this._scene.getAnimationGroupByName("Flashlight_2.Idle");
+        this._run = this._scene.getAnimationGroupByName("Flashlight_2.Run");
+        this._start = this._scene.getAnimationGroupByName("Flashlight_2.Get");
+        this._walk = this._scene.getAnimationGroupByName("Flashlight_2.Walk");
         this._run.loopAnimation = true;
         this._idle.loopAnimation = true;
         this._walk.loopAnimation = true;
-        this._aim_walk.loopAnimation = true;
+        this._start.loopAnimation = false;
+        this._fire.loopAnimation = false;
+        this._end.loopAnimation = false;
 
-        //shooting part
-        this._cooldown_fire = 0.7;
-        this._damage = 100;
-        FPSController._ammo = 10;
-        FPSController._max_ammo = 10;
+        //audio effect 
+        this._weaponSound = new Sound("attack", "sounds/snipershot.mp3", this._scene);
+        this._reloadSound = new Sound("snipersoundreload", "sounds/sniper-reload.mp3", this._scene);
 
-        return {
-            mesh: env as Mesh,
-            animationGroups: result.animationGroups
-        }
     }
 
     private changeState(newState: CharacterState) {
@@ -781,50 +825,6 @@ export class FPSController {
         currentState = newState;
     }
 
-    private getAnimationGroup(state: CharacterState): AnimationGroup {
-        switch (state) {
-            case CharacterState.End:
-                return this._end;
-            case CharacterState.Fire:
-                return this._fire;
-            case CharacterState.Idle:
-                return this._idle;
-            case CharacterState.Reload:
-                return this._reload;
-            case CharacterState.Run:
-                return this._run;
-            case CharacterState.Start:
-                return this._start;
-            case CharacterState.Walk:
-                return this._walk;
-            case CharacterState.AimWalk:
-                return this._aim_walk;
-            case CharacterState.AimShot:
-                return this._aim_shot;
-            case CharacterState.AimIdle:
-                return this._aim_idle;
-        }
-    }
-
-
-    private createTransitionAnimation(currentAnim: AnimationGroup, newAnim: AnimationGroup): AnimationGroup {
-        // Create a transition animation that blends between the last frame of the current animation and the first frame of the new animation
-        const transitionAnim = new AnimationGroup("TransitionAnimation");
-        const currentKeys = currentAnim.targetedAnimations[0].animation.getKeys();
-        const newKeys = newAnim.targetedAnimations[0].animation.getKeys();
-        const transitionKeys = [
-            currentKeys[currentKeys.length - 1],
-            newKeys[0]
-        ];
-        const transitionAnimation = new Animation("TransitionAnimation", "worldMatrix", 60, Animation.ANIMATIONTYPE_MATRIX);
-        transitionAnimation.setKeys(transitionKeys);
-        transitionAnim.addTargetedAnimation(transitionAnimation, this._weapon);
-        transitionAnim.normalize(0, 1);
-        transitionAnim.loopAnimation = false;
-
-        return transitionAnim;
-    }
-
     private initialPosition: Vector3 = null;
     private lastParentName: string = null;
     // Add these properties to your class
@@ -835,35 +835,78 @@ export class FPSController {
     private handleInteraction(): void {
         this._scene.onKeyboardObservable.add((kbInfo) => {
             if (kbInfo.type === KeyboardEventTypes.KEYDOWN && kbInfo.event.key === 'e') {
-
                 if (this.mouseMoveListener) {
                     this._canvas.removeEventListener("mousemove", this.mouseMoveListener);
                     this.mouseMoveListener = null;
                     if (this.examiningObject) {
-                        // If already examining an object, put it back to its initial position and rotation
-                        this.examiningObjectMesh.parent = this._scene.getTransformNodeByName(this.lastParentName);
-                        this.examiningObjectMesh.position = this.initialPosition;
-                        this.examiningObjectMesh.rotation = this.initialRotation;
-                        this.examiningObject = false;
+                        console.log("examining object naeme :", this.examiningObjectMesh.name);
+                        if (this.examiningObjectMesh.name === "IA_Lantern_primitive0") {
+                            this.examiningObjectMesh.setEnabled(false);
+                            this.swap(this._weapon, "lantern");
+                            this.firstChild = this._weapon;
+                            this.examiningObject = false;
 
-                        this.firstChild.setEnabled(true);
+                            // Hide the examination HUD
+                            //document.getElementById("examination-hud").style.display = "none";
 
-                        // Hide the examination HUD
-                        //document.getElementById("examination-hud").style.display = "none";
+                            this._canvas.focus();
 
-                        // Unlock the pointer and show the cursor
-                        document.exitPointerLock();
+                            // Enable camera movement
+                            this.enableCameraMovement();
+                        }
+                        if (this.examiningObjectMesh.name === "IA_Flashlight_primitive0") {
+                            this.examiningObjectMesh.setEnabled(false);
+                            this.swap(this._weapon, "flashlight");
+                            this.firstChild = this._weapon;
+                            this.examiningObject = false;
 
-                        // Enable camera movement
-                        this.enableCameraMovement();
+                            // Hide the examination HUD
+                            //document.getElementById("examination-hud").style.display = "none";
+
+                            this._canvas.focus();
+
+                            // Enable camera movement
+                            this.enableCameraMovement();
+                        }
+                        if (this.examiningObjectMesh.name === "I_Key03") {
+                            this.examiningObjectMesh.setEnabled(false);
+                            this.examiningObject = false;
+                            this.firstChild = this._weapon;
+                            this.firstChild.setEnabled(true);
+                            this._canvas.focus();
+                            this.enableCameraMovement();
+                            this.canOpenDoor2 = true;
+                            this._keySound.play();
+                        }
+                        else {
+
+                            // If already examining an object, put it back to its initial position and rotation
+                            this.examiningObjectMesh.parent = this._scene.getTransformNodeByName(this.lastParentName);
+                            this.examiningObjectMesh.position = this.initialPosition;
+                            this.examiningObjectMesh.rotation = this.initialRotation;
+                            this.examiningObject = false;
+
+                            this.firstChild.setEnabled(true);
+
+                            // Hide the examination HUD
+                            //document.getElementById("examination-hud").style.display = "none";
+
+                            this._canvas.focus();
+
+                            // Enable camera movement
+                            this.enableCameraMovement();
+                        }
                     }
                 } else {
+
+                    //distance of the ray
+                    const maxDistance = 5;
 
                     // Calculate the forward direction from the camera
                     const forward = this._camera.getForwardRay().direction;
 
                     // Create a ray from the camera position in the forward direction
-                    const ray = new Ray(this._camera.position, forward);
+                    const ray = new Ray(this._camera.position, forward, maxDistance);
 
                     // Perform a raycast to check for intersections with objects in the scene
                     const pickInfo = this._scene.pickWithRay(ray);
@@ -904,6 +947,9 @@ export class FPSController {
                                     this.openChestOfDrawers(pickedObject);
                                 }
                             }
+                        }
+                        if (pickInfo && pickInfo.hit && this.canExamineDoor(pickInfo.pickedMesh)) {
+                            this.openDoor(pickInfo.pickedMesh);
                         }
                     }
                 }
@@ -998,7 +1044,8 @@ export class FPSController {
 
     private examineObject(object: AbstractMesh): void {// Calculate the new position for the object based on the camera's position and direction
         // hide the hands
-        this.firstChild = this._camera.getChildren(node => node.name === "__root__")[0];
+        //this.firstChild = this._camera.getChildren(node => node.name === "__root__")[0];
+        this.firstChild = this._weapon;
         this.firstChild.setEnabled(false);
         // Make the object a child of the camera during examination
         object.parent = this._camera;
@@ -1072,6 +1119,128 @@ export class FPSController {
         }
 
         // None of the parents have an allowed name, cannot examine the object
+        return false;
+    }
+
+    private openDoor(pickedObject: AbstractMesh) {
+        if (this.isAnimating || (pickedObject.name !== "DoorHouse.002" && pickedObject.name !== "DoorHouse.004" &&
+            pickedObject.name !== "Door.001" && pickedObject.name !== "OldDoor.001")) {
+            return;
+        }
+
+        const animationDuration = 60; // Durée de l'animation en millisecondes
+        const initialRotationQuaternion = pickedObject.rotationQuaternion;
+        const initialEulerAngles = initialRotationQuaternion.toEulerAngles();
+        let targetEulerAngles: Vector3;
+        if (pickedObject.name === "DoorHouse.004") {
+            if (this.canOpenDoor1) {
+                if (initialEulerAngles.z > -3) {
+                    targetEulerAngles = new Vector3(initialEulerAngles.x, initialEulerAngles.y, initialEulerAngles.z + (Math.PI / 2)); // Ajouter 90 degrés
+                    this._openDoorSound.play();
+                }
+
+                else {
+                    targetEulerAngles = new Vector3(initialEulerAngles.x, initialEulerAngles.y, initialEulerAngles.z + (3 * (Math.PI / 2))); // Soustraire 90 degrés
+                    this._openDoorSound.play();
+                }
+            }
+            else {
+                this._lockedSound.play();
+                return;
+            }
+        }
+
+        if (pickedObject.name === "DoorHouse.002") {
+            if (this.canOpenDoor2) {
+                if (initialEulerAngles.z > 1) {
+                    targetEulerAngles = new Vector3(initialEulerAngles.x, initialEulerAngles.y, initialEulerAngles.z - (Math.PI / 2)); // Soustraire 90 degrés
+                    this._openDoorSound.play();
+                } else {
+                    targetEulerAngles = new Vector3(initialEulerAngles.x, initialEulerAngles.y, initialEulerAngles.z + (Math.PI / 2)); // Ajouter 90 degrés
+                    this._openDoorSound.play();
+                }
+            } else {
+                this._lockedSound.play();
+                return;
+            }
+        }
+
+        if (pickedObject.name === "Door.001") {
+            if (this.canOpenDoor3) {
+                if (initialEulerAngles.z < 2) {
+                    targetEulerAngles = new Vector3(initialEulerAngles.x, initialEulerAngles.y, initialEulerAngles.z + (Math.PI / 2)); // Ajouter 90 degrés
+                    this._openDoorSound.play();
+                } else {
+                    targetEulerAngles = new Vector3(initialEulerAngles.x, initialEulerAngles.y, initialEulerAngles.z - (Math.PI / 2)); // Soustraire 90 degrés
+                    this._openDoorSound.play();
+                }
+            }
+            else {
+                this._lockedSound.play();
+                return;
+            }
+        }
+        if (pickedObject.name === "OldDoor.001") {
+            if (initialEulerAngles.y < 1) {
+                if (this.canOpenDoor4) {
+                    targetEulerAngles = new Vector3(initialEulerAngles.x, initialEulerAngles.y + (Math.PI / 2), initialEulerAngles.z); // Ajouter 90 degrés
+                    this._openDoorSound.play();
+                } else {
+                    targetEulerAngles = new Vector3(initialEulerAngles.x, initialEulerAngles.y - (Math.PI / 2), initialEulerAngles.z); // Soustraire 90 degrés
+                    this._openDoorSound.play();
+                }
+            }
+            else {
+                this._lockedSound.play();
+                return;
+            }
+        }
+
+        // Création de l'animation
+        const animation = new Animation(
+            'rotationAnimation', // Nom de l'animation
+            'rotationQuaternion', // Propriété à animer (rotationQuaternion)
+            60, // Nombre de frames par seconde
+            Animation.ANIMATIONTYPE_QUATERNION, // Type d'animation (quaternion)
+            Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+        );
+
+        const keys = [
+            { frame: 0, value: initialRotationQuaternion }, // Frame initiale
+            { frame: animationDuration, value: Quaternion.RotationYawPitchRoll(targetEulerAngles.y, targetEulerAngles.x, targetEulerAngles.z) } // Frame finale
+        ];
+
+        // Ajout des frames à l'animation
+        animation.setKeys(keys);
+
+        // Attacher l'animation à l'objet
+        pickedObject.animations = [];
+        pickedObject.animations.push(animation);
+
+        // Lancer l'animation
+        this.isAnimating = true;
+        this._scene.beginAnimation(pickedObject, 0, animationDuration, false).onAnimationEnd = () => {
+            this.isAnimating = false;
+        };
+    }
+
+    private canExamineDoor(object: AbstractMesh): boolean {
+        let parent = object.parent;
+
+        // Iterate through the parents up to three levels
+        for (let i = 0; i < 2; i++) {
+            if (!parent || !parent.name) {
+                // No more parents to check, exit the loop
+                break;
+            }
+            // Check if the parent's name is in the allowed list
+            if (["Door02 (3)", "Door02.001", "OldDoor", "Door02_Jammed"].includes(parent.name)) {
+                return true;
+            }
+
+            // Move up to the next parent
+            parent = parent.parent;
+        }
         return false;
     }
 

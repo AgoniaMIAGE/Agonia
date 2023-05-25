@@ -293,11 +293,6 @@ class App {
             this._currentRound += 1;    
         }
         this._round.day();
-        console.log(this._currentRound);
-        if (this._currentRound == 3 || this._currentRound == 4 || this._currentRound == 7) {
-            this._fps.changeWeapon();
-            PlayerHealth._current_Health = 200;
-        }
         this._isdead = false;
         await Tools.DelayAsync(2000000000000000000);
         this.night();
@@ -435,7 +430,7 @@ class App {
             cRight = 180 + (PlayerHealth._current_Health * (PlayerHealth._current_Health - 200)) / (-PlayerHealth._current_Health);
             //above is the update of the healthBar, bellow the update of the ammo amount
             ammoNb.text = "";
-            ammoNb.text = "   " + FPSController._ammo.toString() + "/" + FPSController._max_ammo;
+            //ammoNb.text = "   " + FPSController._ammo.toString() + "/" + FPSController._max_ammo;
         })
     }
 

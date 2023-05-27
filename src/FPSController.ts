@@ -150,6 +150,7 @@ export class FPSController {
         this.createAllWeapons();
         this.createCandle();
         this.createController();
+        this.importWeapon();
         this.InitCameraKeys();
         this.keyboardInput();
         this.setuplight();
@@ -337,6 +338,9 @@ export class FPSController {
                 break;
             case "lantern":
                 this.createLantern();
+                break;
+            case "pistol":
+                this.createPistol();
                 break;
         }
     }
@@ -619,6 +623,7 @@ export class FPSController {
         await this.createWeapon1();
         await this.createWeapon2();
         await this.createweapon3();
+        await this.createweapon4();
 
         // Désactiver toutes les armes
         for (const weapon of this.allWeapons) {
@@ -695,6 +700,58 @@ export class FPSController {
             animationGroups: result.animationGroups
         }
     }
+
+    private async createweapon4(): Promise<any> {
+        const result = await SceneLoader.ImportMeshAsync("", "./models/", "pistol.glb", this._scene);
+
+        let env = result.meshes[0];
+        let allMeshes = env.getChildMeshes();
+        env.parent = this._camera;
+        this.allWeapons.push(env);
+        result.meshes[0].position = new Vector3(0, -1.7, 0.2);
+        result.meshes[0].rotation = new Vector3(0, 0, 0);
+        result.meshes[0].scaling = new Vector3(1, 1, -1);
+
+
+        return {
+            mesh: env as Mesh,
+            animationGroups: result.animationGroups
+        }
+    }
+
+        //Pistol and its variables/stats
+        private async createPistol(): Promise<any> {
+
+            this.isMeleeWeapon = false;
+            this.canFire = true;
+    
+            // Désactiver toutes les armes
+            for (const weapon of this.allWeapons) {
+                weapon.setEnabled(false);
+            }
+    
+            // Activer la première arme (candle dans cet exemple)
+            this.allWeapons[1].setEnabled(true);
+            this._weapon = this.allWeapons[1];
+    
+            //animations
+            this._end = this._scene.getAnimationGroupByName("Hands_Gun.Hide");
+            this._fire = this._scene.getAnimationGroupByName("Hands_Gun.Shot");
+            this._idle = this._scene.getAnimationGroupByName("Hands_Gun.Idle");
+            this._run = this._scene.getAnimationGroupByName("Hands_Gun.Run");
+            this._start = this._scene.getAnimationGroupByName("Hands_Gun.Get");
+            this._walk = this._scene.getAnimationGroupByName("Hands_Gun.Walk");
+            this._run.loopAnimation = true;
+            this._idle.loopAnimation = true;
+            this._walk.loopAnimation = true;
+            this._start.loopAnimation = false;
+            this._fire.loopAnimation = false;
+            this._end.loopAnimation = false;
+    
+            //audio effect 
+            this._weaponSound = new Sound("attack", "sounds/whoosh.mp3", this._scene);
+    
+        }
 
 
     //Scar and its variables/stats
@@ -943,6 +1000,23 @@ export class FPSController {
                             this.torcheOn = true;///à remplacer par la hache
                             this.examiningObjectMesh.setEnabled(false);
                             this.swap(this._weapon, "flashlight");
+                            this.firstChild = this._weapon;
+                            this.examiningObject = false;
+                            this.lanternLight.setEnabled(false);
+                            this.bougieLight.setEnabled(false);
+
+                            // Hide the examination HUD
+                            //document.getElementById("examination-hud").style.display = "none";
+
+                            this._canvas.focus();
+
+                            // Enable camera movement
+                            this.enableCameraMovement();
+                        }
+                        if (this.examiningObjectMesh.name === "Hands_Gun") {
+                            this.torcheOn = true;///à remplacer par la hache
+                            this.examiningObjectMesh.setEnabled(false);
+                            this.swap(this._weapon, "pistol");
                             this.firstChild = this._weapon;
                             this.examiningObject = false;
                             this.lanternLight.setEnabled(false);
@@ -1466,17 +1540,25 @@ export class FPSController {
 
 
     private createPuzzleGame(): void {
-
         // Create a 2D advanced texture to hold the GUI controls
         let advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-        this._scene
+        let isHUDVisible = true;
 
-        // Create a stack panel to hold the buttons
-        let panel = new StackPanel();
-        panel.width = "220px";
-        panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-        panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-        advancedTexture.addControl(panel);
+
+        // Create a grid to hold the buttons
+        let grid = new Grid();
+        grid.width = "250px";
+        grid.height = "220px";
+        grid.addColumnDefinition(1);
+        grid.addColumnDefinition(1);
+        grid.addColumnDefinition(1);
+        grid.addRowDefinition(1);
+        grid.addRowDefinition(1);
+        grid.addRowDefinition(1);
+        grid.addRowDefinition(1);
+        grid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        grid.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        advancedTexture.addControl(grid);
 
         // The code that the user needs to enter
         const correctCode = "3223";
@@ -1486,17 +1568,92 @@ export class FPSController {
 
         // TextBlock to display the entered code
         let codeDisplay = new TextBlock();
-        codeDisplay.text = enteredCode;
-        codeDisplay.color = "white";
-        panel.addControl(codeDisplay);
+        codeDisplay.text = "";
+        codeDisplay.color = "white";  // Change color to white
+        codeDisplay.fontSize = 36;     // Increase font size to 36
+        codeDisplay.height = "40px";
+        codeDisplay.width = "220px";
+        codeDisplay.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        advancedTexture.addControl(codeDisplay);
 
-        for (let i = 0; i < 10; i++) {
-            let button = Button.CreateSimpleButton("button" + i, String(i));
-            button.width = "50px";
-            button.height = "50px";
-            button.color = "white";
-            button.background = "black";
-            panel.addControl(button);
+        // TextBlock pour afficher les messages
+        let messageDisplay = new TextBlock();
+        messageDisplay.text = "";
+        messageDisplay.color = "white";
+        messageDisplay.fontSize = 18;
+        messageDisplay.height = "40px";
+        messageDisplay.width = "220px";
+        messageDisplay.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        messageDisplay.top = "-50px";
+        advancedTexture.addControl(messageDisplay);
+
+
+        // Add buttons in a grid layout
+        let buttonValues = [
+            ['7', '8', '9'],
+            ['4', '5', '6'],
+            ['1', '2', '3'],
+            ['Clear', '0', 'Enter']
+        ];
+        for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 3; j++) {
+                let button = Button.CreateSimpleButton("button" + buttonValues[i][j], buttonValues[i][j]);
+                button.width = "80px";
+                button.height = "50px";
+                button.color = "white";
+                button.background = "black";
+                button.paddingTop = "10px";
+                button.paddingBottom = "10px";
+                button.paddingLeft = "10px";
+                button.paddingRight = "10px";
+
+                // Add an animation when a character is entered
+                var animation = new Animation("buttonClickAnimation", "scaleX", 60, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_CYCLE);
+                var keys = [];
+                keys.push({ frame: 0, value: 1 });
+                keys.push({ frame: 10, value: 0.9 });
+                keys.push({ frame: 20, value: 1 });
+                animation.setKeys(keys);
+                button.animations = button.animations || [];
+                button.animations.push(animation);
+                this._scene.beginAnimation(button, 0, 20, false);
+
+
+                button.onPointerUpObservable.add(() => {
+                    // If the button value is a digit, add it to the entered code
+                    if (buttonValues[i][j] >= '0' && buttonValues[i][j] <= '9') {
+                        enteredCode += buttonValues[i][j];
+                        codeDisplay.text = enteredCode;
+                        messageDisplay.text = "Entered number " + buttonValues[i][j];
+                    }
+
+                    // If the button value is 'Clear', remove the last digit from the entered code
+                    if (buttonValues[i][j] === 'Clear') {
+                        enteredCode = enteredCode.slice(0, -1);
+                        codeDisplay.text = enteredCode;
+                        messageDisplay.text = "Cleared last digit";
+                    }
+
+                    // Afficher les messages dans le TextBlock messageDisplay
+                    // If the button value is 'Enter', check if the entered code is correct
+                    if (buttonValues[i][j] === 'Enter') {
+                        if (enteredCode === correctCode) {
+                            messageDisplay.text = "Correct code entered!";
+                            this._doorunlockSound.play();
+                            // Déverrouiller la porte
+                            this.canOpenDoor3 = true;
+                            isHUDVisible = false; // Hide the HUD
+                            this.disableHUD(grid, codeDisplay, messageDisplay );
+                        } else {
+                            messageDisplay.text = "Incorrect code. Try again.";
+                        }
+                        // Réinitialiser le code entré
+                        enteredCode = "";
+                        codeDisplay.text = enteredCode;
+                    }
+                });
+                grid.addControl(button, i, j);
+            }
         }
 
         // Add keydown event listener
@@ -1522,67 +1679,36 @@ export class FPSController {
                 console.log("Code reset");
             }
 
-            // If the pressed key is Enter, check if the entered code is correct
             if (event.key === 'Enter') {
                 if (enteredCode === correctCode) {
-                    console.log("Correct code entered!");
+                    messageDisplay.text = "Correct code entered!";
+                    this._doorunlockSound.play();
+                    // Déverrouiller la porte
+                    this.canOpenDoor3 = true;
+                    isHUDVisible = false; // Hide the HUD
+                    this.disableHUD(grid, codeDisplay, messageDisplay );
                 } else {
-                    console.log("Incorrect code. Try again.");
+                    messageDisplay.text = "Incorrect code. Try again.";
                 }
-                // Reset the entered code
+                // Réinitialiser le code entré
                 enteredCode = "";
                 codeDisplay.text = enteredCode;
             }
-        });
-
-        // Add a button to clear the last digit
-        let clearButton = Button.CreateSimpleButton("clearButton", "Clear last");
-        clearButton.width = "220px";
-        clearButton.height = "50px";
-        clearButton.color = "white";
-        clearButton.background = "orange";
-        clearButton.onPointerUpObservable.add(function () {
-            // When the clear button is clicked, remove the last digit from the entered code
-            enteredCode = enteredCode.slice(0, -1);
-            codeDisplay.text = enteredCode;
-            console.log("Cleared last digit");
-        });
-        panel.addControl(clearButton);
-
-        // Add a button to reset the code
-        let resetButton = Button.CreateSimpleButton("resetButton", "Reset");
-        resetButton.width = "220px";
-        resetButton.height = "50px";
-        resetButton.color = "white";
-        resetButton.background = "red";
-        resetButton.onPointerUpObservable.add(function () {
-            // When the reset button is clicked, clear the entered code
-            enteredCode = "";
-            codeDisplay.text = enteredCode;
-            console.log("Code reset");
-        });
-        panel.addControl(resetButton);
-
-        // Add a button for "Enter"
-        let enterButton = Button.CreateSimpleButton("enterButton", "Enter");
-        enterButton.width = "220px";
-        enterButton.height = "50px";
-        enterButton.color = "white";
-        enterButton.background = "green";
-        enterButton.onPointerUpObservable.add(function () {
-            // When the "Enter" button is clicked, check if the entered code is correct
-            if (enteredCode === correctCode) {
-                console.log("Correct code entered!");
-            } else {
-                console.log("Incorrect code. Try again.");
+            if (event.key === 'Z' || event.key === 'Q' || event.key === 'D' || event.key === 'S') {
+                isHUDVisible = false; // Hide the HUD
+                this.disableHUD(grid, codeDisplay, messageDisplay );
             }
-            // Reset the entered code
-            enteredCode = "";
-            codeDisplay.text = enteredCode;
         });
-        panel.addControl(enterButton);
     }
 
+    private disableHUD(grid: Grid, codeDisplay: TextBlock, messageDisplay: TextBlock) {
+        grid.isVisible = false;
+        codeDisplay.isVisible = false;
+        setTimeout(() => {
+            messageDisplay.isVisible = false;
+        }, 2000);
+
+    }
 
 
     private openOil() {
@@ -1733,6 +1859,25 @@ export class FPSController {
             parent = parent.parent;
         }
         return false;
+    }
+
+    private importWeapon() {
+        SceneLoader.ImportMesh("", "./models/", "pistolonly.glb", this._scene, function (newMeshes) {
+            // Le modèle a été chargé avec succès
+            var importedMesh = newMeshes[0]; // Le modèle est généralement le premier élément dans le tableau newMeshes
+        
+            // Position du modèle
+            importedMesh.position = new Vector3(41.91, 2, 156.35); // Remplacez x, y, z par les coordonnées de la position souhaitée
+        
+            // Vous pouvez également effectuer d'autres opérations sur le modèle ici
+        
+            // Exemple : Rotation du modèle
+            //importedMesh.rotation = new Vector3(rx, ry, rz); // Remplacez rx, ry, rz par les angles de rotation souhaités
+        
+            // Exemple : Mise à l'échelle du modèle
+            //importedMesh.scaling = new Vector3(sx, sy, sz); // Remplacez sx, sy, sz par les facteurs d'échelle souhaités
+        });
+
     }
 
 }

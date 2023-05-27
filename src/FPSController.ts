@@ -6,7 +6,7 @@ import { Mutant } from "./Mutant";
 import { PlayerHealth } from "./PlayerHealth";
 import { Zombie } from "./Zombie";
 import * as cannon from 'cannon';
-import { Button, Control, Rectangle, AdvancedDynamicTexture, TextBlock, Grid,StackPanel } from "@babylonjs/gui";
+import { Button, Control, Rectangle, AdvancedDynamicTexture, TextBlock, Grid, StackPanel } from "@babylonjs/gui";
 
 
 enum CharacterState {
@@ -120,7 +120,7 @@ export class FPSController {
     private _pistol: AbstractMesh;
     private _rifle: AbstractMesh;
     private allWeapons: AbstractMesh[] = [];
-    private torcheOn : boolean; // à remplacer par axeOn
+    private torcheOn: boolean; // à remplacer par axeOn
 
 
     //examining object 
@@ -183,16 +183,16 @@ export class FPSController {
         this._doorunlockSound = new Sound("doorunlock", "sounds/doorunlock.mp3", this._scene);
         this._lockedSound = new Sound("locked", "sounds/locked.mp3", this._scene);
         this._lanternSound = new Sound("lantern", "sounds/lantern.mp3", this._scene);
-        this._plankBreak = new Sound("plankbreak","sounds/plankbreak.mp3",this._scene);
-        this._radioSound = new Sound("scaryradio","sounds/scaryradio.mp3",this._scene);
-        this._bookSound = new Sound("book","sounds/book.mp3",this._scene);
-        this._axeSound = new Sound("axe","sounds/axe.mp3",this._scene);
-        this._glassBottleSound = new Sound("glassbottle","sounds/glassbottle.mp3",this._scene);
-        this._itemPickUpSound = new Sound("itempickup","sounds/itempickup.mp3",this._scene);
-        this._paperSound = new Sound("paper","sounds/paper.mp3",this._scene);
-        this._phoneSound = new Sound("phone","sounds/phone.mp3",this._scene);
-        this._putObjectSound = new Sound("putobject","sounds/putobject.mp3",this._scene);
-        this._appleSound = new Sound("apple","sounds/apple.mp3",this._scene);
+        this._plankBreak = new Sound("plankbreak", "sounds/plankbreak.mp3", this._scene);
+        this._radioSound = new Sound("scaryradio", "sounds/scaryradio.mp3", this._scene);
+        this._bookSound = new Sound("book", "sounds/book.mp3", this._scene);
+        this._axeSound = new Sound("axe", "sounds/axe.mp3", this._scene);
+        this._glassBottleSound = new Sound("glassbottle", "sounds/glassbottle.mp3", this._scene);
+        this._itemPickUpSound = new Sound("itempickup", "sounds/itempickup.mp3", this._scene);
+        this._paperSound = new Sound("paper", "sounds/paper.mp3", this._scene);
+        this._phoneSound = new Sound("phone", "sounds/phone.mp3", this._scene);
+        this._putObjectSound = new Sound("putobject", "sounds/putobject.mp3", this._scene);
+        this._appleSound = new Sound("apple", "sounds/apple.mp3", this._scene);
     }
     /**
      * launched every 60ms 
@@ -940,7 +940,7 @@ export class FPSController {
                             this.enableCameraMovement();
                         }
                         if (this.examiningObjectMesh.name === "IA_Flashlight_primitive0") {
-                            this.torcheOn=true;///à remplacer par la hache
+                            this.torcheOn = true;///à remplacer par la hache
                             this.examiningObjectMesh.setEnabled(false);
                             this.swap(this._weapon, "flashlight");
                             this.firstChild = this._weapon;
@@ -967,8 +967,7 @@ export class FPSController {
                             this._keySound.play();
                         }
                         else {
-                            if(this.examiningObjectMesh.name==="Radio")
-                            {
+                            if (this.examiningObjectMesh.name === "Radio") {
                                 this._radioSound.stop();
                             }
                             // If already examining an object, put it back to its initial position and rotation
@@ -1034,29 +1033,27 @@ export class FPSController {
                                 console.log(pickedObject.name);
                                 if (this.isOpen) {
                                     this.closeChestOfDrawers(pickedObject);
-                                    if(pickedObject.name === "Drawer1" && this.oilOpen){
+                                    if (pickedObject.name === "Drawer1" && this.oilOpen) {
                                         this.closeOil();
-                                        this.oilOpen=false;
+                                        this.oilOpen = false;
                                     }
-                                    if(pickedObject.name === "Drawer1.002" && this.batteryFlashlightOpen)
-                                    {
-                                       this.closeBattery();
-                                       this.closeFlashlight();
-                                       this.batteryFlashlightOpen=false;
+                                    if (pickedObject.name === "Drawer1.002" && this.batteryFlashlightOpen) {
+                                        this.closeBattery();
+                                        this.closeFlashlight();
+                                        this.batteryFlashlightOpen = false;
                                     }
                                     this.isOpen = false;
 
                                 } else {
                                     this.openChestOfDrawers(pickedObject);
-                                    if(pickedObject.name === "Drawer1" && !this.oilOpen){
+                                    if (pickedObject.name === "Drawer1" && !this.oilOpen) {
                                         this.openOil();
-                                        this.oilOpen=true;
+                                        this.oilOpen = true;
                                     }
-                                    if(pickedObject.name === "Drawer1.002" && !this.batteryFlashlightOpen)
-                                    {
-                                       this.openBattery();
-                                       this.openFlashlight();
-                                       this.batteryFlashlightOpen = true;
+                                    if (pickedObject.name === "Drawer1.002" && !this.batteryFlashlightOpen) {
+                                        this.openBattery();
+                                        this.openFlashlight();
+                                        this.batteryFlashlightOpen = true;
                                     }
                                     this.isOpen = true;
                                 }
@@ -1065,7 +1062,7 @@ export class FPSController {
                         if (pickInfo && pickInfo.hit && this.canExamineDoor(pickInfo.pickedMesh)) {
                             this.openDoor(pickInfo.pickedMesh);
                         }
-                        if(pickInfo && pickInfo.hit && this.canExaminePlanks(pickInfo.pickedMesh) && this.torcheOn){
+                        if (pickInfo && pickInfo.hit && this.canExaminePlanks(pickInfo.pickedMesh) && this.torcheOn) {
                             pickInfo.pickedMesh.setEnabled(false);
                             this._plankBreak.setVolume(0.2);
                             this._plankBreak.play();
@@ -1174,40 +1171,31 @@ export class FPSController {
         object.scaling.z = Math.abs(object.scaling.z) * -1;
 
         this.examiningObject = true;
-        if(object.name==="Radio")
-        {
+        if (object.name === "Radio") {
             this._radioSound.play();
         }
-        if(object.name==="Paper_01" || object.name === "PaperBent_A")
-        {
+        if (object.name === "Paper_01" || object.name === "PaperBent_A") {
             this._paperSound.play();
         }
-        if(object.name==="IC_PetrolOilBottle")
-        {
+        if (object.name === "IC_PetrolOilBottle") {
             this._glassBottleSound.play();
         }
-        if(object.name==="Budha")
-        {
+        if (object.name === "Budha") {
             this._putObjectSound.play();
         }
-        if(object.name==="Telephone01")
-        {
+        if (object.name === "Telephone01") {
             this._phoneSound.play();
         }
-        if(object.name==="IH_Apple" || object.name==="IH_Banana")
-        {
+        if (object.name === "IH_Apple" || object.name === "IH_Banana") {
             this._appleSound.play();
         }
-        if(object.name==="IA_Axe")
-        {
+        if (object.name === "IA_Axe") {
             this._axeSound.play();
         }
-        if(object.name==="IR_Battery01" || object.name==="IR_Battery01 (1)")
-        {
+        if (object.name === "IR_Battery01" || object.name === "IR_Battery01 (1)") {
             this._itemPickUpSound.play();
         }
-        if(object.name==="Book_01.001" || object.name==="Book_02.001" || object.name==="Book_03.001" || object.name==="Book_04.001")
-        {
+        if (object.name === "Book_01.001" || object.name === "Book_02.001" || object.name === "Book_03.001" || object.name === "Book_04.001") {
             this._bookSound.play();
         }
 
@@ -1501,24 +1489,51 @@ export class FPSController {
         codeDisplay.text = enteredCode;
         codeDisplay.color = "white";
         panel.addControl(codeDisplay);
-        document.exitPointerLock();
 
-
-        // Add buttons for each digit
         for (let i = 0; i < 10; i++) {
             let button = Button.CreateSimpleButton("button" + i, String(i));
             button.width = "50px";
             button.height = "50px";
             button.color = "white";
             button.background = "black";
-            button.onPointerUpObservable.add(function () {
-                // When the button is clicked, add its number to the entered code
-                enteredCode += String(i);
-                codeDisplay.text = enteredCode;
-                console.log("Clicked button " + i);
-            });
             panel.addControl(button);
         }
+
+        // Add keydown event listener
+        window.addEventListener("keydown", (event) => {
+            // If the pressed key is a digit, add it to the entered code
+            if (event.key >= '0' && event.key <= '9') {
+                enteredCode += event.key;
+                codeDisplay.text = enteredCode;
+                console.log("Entered number " + event.key);
+            }
+
+            // If the pressed key is Backspace, remove the last digit from the entered code
+            if (event.key === 'Backspace') {
+                enteredCode = enteredCode.slice(0, -1);
+                codeDisplay.text = enteredCode;
+                console.log("Cleared last digit");
+            }
+
+            // If the pressed key is Escape, clear the entered code
+            if (event.key === 'Escape') {
+                enteredCode = "";
+                codeDisplay.text = enteredCode;
+                console.log("Code reset");
+            }
+
+            // If the pressed key is Enter, check if the entered code is correct
+            if (event.key === 'Enter') {
+                if (enteredCode === correctCode) {
+                    console.log("Correct code entered!");
+                } else {
+                    console.log("Incorrect code. Try again.");
+                }
+                // Reset the entered code
+                enteredCode = "";
+                codeDisplay.text = enteredCode;
+            }
+        });
 
         // Add a button to clear the last digit
         let clearButton = Button.CreateSimpleButton("clearButton", "Clear last");
@@ -1568,161 +1583,156 @@ export class FPSController {
         panel.addControl(enterButton);
     }
 
-    private openOil()
-    {
-        const object =  this._scene.getMeshByName("IC_OilBottle");
+
+
+    private openOil() {
+        const object = this._scene.getMeshByName("IC_OilBottle");
         const animationDuration = 20; // Durée de l'animation en millisecondes
         const initialZ = object.position.z; // Position initiale de l'objet
-        const targetZ = initialZ+0.5; // Position finale de l'ouverture du tiroir
+        const targetZ = initialZ + 0.5; // Position finale de l'ouverture du tiroir
 
-        this.animationPosition(object,initialZ,targetZ,animationDuration,false,false);
+        this.animationPosition(object, initialZ, targetZ, animationDuration, false, false);
     }
 
-    private closeOil()
-    {
-        const object =  this._scene.getMeshByName("IC_OilBottle");
+    private closeOil() {
+        const object = this._scene.getMeshByName("IC_OilBottle");
         const animationDuration = 20; // Durée de l'animation en millisecondes
         const initialZ = object.position.z; // Position initiale de l'objet
-        const targetZ = initialZ-0.5; // Position finale de l'ouverture du tiroir
+        const targetZ = initialZ - 0.5; // Position finale de l'ouverture du tiroir
 
-        this.animationPosition(object,initialZ,targetZ,animationDuration,false,false);
+        this.animationPosition(object, initialZ, targetZ, animationDuration, false, false);
     }
 
-    private openBattery()
-    {
-        const object =  this._scene.getMeshByName("IR_Battery01");
-        const object2 =  this._scene.getMeshByName("IR_Battery01 (1)");
+    private openBattery() {
+        const object = this._scene.getMeshByName("IR_Battery01");
+        const object2 = this._scene.getMeshByName("IR_Battery01 (1)");
         const animationDuration = 20; // Durée de l'animation en millisecondes
         const initialX = object.position.x; // Position initiale de l'objet
-        const targetX = initialX+0.5; // Position finale de l'ouverture du tiroir
+        const targetX = initialX + 0.5; // Position finale de l'ouverture du tiroir
 
-        this.animationPosition(object,initialX,targetX,animationDuration,true,false);
-        this.animationPosition(object2,initialX,targetX,animationDuration,true,false);
+        this.animationPosition(object, initialX, targetX, animationDuration, true, false);
+        this.animationPosition(object2, initialX, targetX, animationDuration, true, false);
     }
 
-    private closeBattery()
-    {
-        const object =  this._scene.getMeshByName("IR_Battery01");
-        const object2 =  this._scene.getMeshByName("IR_Battery01 (1)");
+    private closeBattery() {
+        const object = this._scene.getMeshByName("IR_Battery01");
+        const object2 = this._scene.getMeshByName("IR_Battery01 (1)");
         const animationDuration = 20; // Durée de l'animation en millisecondes
         const initialX = object.position.x; // Position initiale de l'objet
-        const targetX = initialX-0.5; // Position finale de l'ouverture du tiroir
+        const targetX = initialX - 0.5; // Position finale de l'ouverture du tiroir
 
-        this.animationPosition(object,initialX,targetX,animationDuration,true,false);
-        this.animationPosition(object2,initialX,targetX,animationDuration,true,false);
+        this.animationPosition(object, initialX, targetX, animationDuration, true, false);
+        this.animationPosition(object2, initialX, targetX, animationDuration, true, false);
     }
-    
 
-    private openFlashlight()
-    {
-        const object =  this._scene.getMeshByName("IA_Flashlight_primitive0");
-        const object2 =  this._scene.getMeshByName("IA_Flashlight_primitive1");
+
+    private openFlashlight() {
+        const object = this._scene.getMeshByName("IA_Flashlight_primitive0");
+        const object2 = this._scene.getMeshByName("IA_Flashlight_primitive1");
         const animationDuration = 20; // Durée de l'animation en millisecondes
         const initialX = object.position.x; // Position initiale de l'objet
-        const targetX = initialX+0.20; // Position finale de l'ouverture du tiroir
+        const targetX = initialX + 0.20; // Position finale de l'ouverture du tiroir
         const initialZ = object.position.z;
-        const targetZ = initialZ+0.04;
+        const targetZ = initialZ + 0.04;
 
-        this.animationPosition(object,initialX,targetX,animationDuration,true,false);
-        this.animationPosition(object2,initialX,targetX,animationDuration,true,false);
+        this.animationPosition(object, initialX, targetX, animationDuration, true, false);
+        this.animationPosition(object2, initialX, targetX, animationDuration, true, false);
     }
 
-    private closeFlashlight()
-    {
-        const object =  this._scene.getMeshByName("IA_Flashlight_primitive0");
-        const object2 =  this._scene.getMeshByName("IA_Flashlight_primitive1");
+    private closeFlashlight() {
+        const object = this._scene.getMeshByName("IA_Flashlight_primitive0");
+        const object2 = this._scene.getMeshByName("IA_Flashlight_primitive1");
         const animationDuration = 20; // Durée de l'animation en millisecondes
         const initialX = object.position.x; // Position initiale de l'objet
-        const targetX = initialX-0.20; // Position finale de l'ouverture du tiroir
+        const targetX = initialX - 0.20; // Position finale de l'ouverture du tiroir
         const initialZ = object.position.z;
-        const targetZ = initialZ-0.04;
+        const targetZ = initialZ - 0.04;
 
-        this.animationPosition(object,initialX,targetX,animationDuration,true,false);
-        this.animationPosition(object2,initialX,targetX,animationDuration,true,false);
+        this.animationPosition(object, initialX, targetX, animationDuration, true, false);
+        this.animationPosition(object2, initialX, targetX, animationDuration, true, false);
     }
 
-        /**
-     * 
-     * @param pickedObject 
-     * @param initialPosition 
-     * @param targetPosition 
-     * @param animationDuration 
-     * @param x boolean pour savoir s'il move sur cet axe
-     * @param y boolean pour savoir s'il move sur cet axe
-     * dans le cas z, x et y seront false
-     */
-        private animationPosition(pickedObject : AbstractMesh, initialPosition : number, targetPosition : number, animationDuration, x : boolean, y : boolean)
-        {
-            var animation;
-            if(x){
-                 // Création de l'animation
-                animation = new Animation(
+    /**
+ * 
+ * @param pickedObject 
+ * @param initialPosition 
+ * @param targetPosition 
+ * @param animationDuration 
+ * @param x boolean pour savoir s'il move sur cet axe
+ * @param y boolean pour savoir s'il move sur cet axe
+ * dans le cas z, x et y seront false
+ */
+    private animationPosition(pickedObject: AbstractMesh, initialPosition: number, targetPosition: number, animationDuration, x: boolean, y: boolean) {
+        var animation;
+        if (x) {
+            // Création de l'animation
+            animation = new Animation(
                 'positionAnimation', // Nom de l'animation
                 'position.x', // Propriété à animer (position.x)
                 60, // Nombre de frames par seconde
                 Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
                 Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
             );
-            }
-            else if(y){
-                 // Création de l'animation
-                animation = new Animation(
+        }
+        else if (y) {
+            // Création de l'animation
+            animation = new Animation(
                 'positionAnimation', // Nom de l'animation
                 'position.y', // Propriété à animer (position.y)
                 60, // Nombre de frames par seconde
                 Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
                 Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
             );
-            }
-            else{
-                 // Création de l'animation
-                animation = new Animation(
+        }
+        else {
+            // Création de l'animation
+            animation = new Animation(
                 'positionAnimation', // Nom de l'animation
                 'position.z', // Propriété à animer (position.z)
                 60, // Nombre de frames par seconde
                 Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
                 Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
             );
-            }
-    
-           
-    
-            // Création de la liste des frames de l'animation
-            const keys: IAnimationKey[] = [
-                { frame: 0, value: initialPosition }, // Frame initiale
-                { frame: animationDuration, value: targetPosition } // Frame finale
-            ];
-    
-            // Ajout des frames à l'animation
-            animation.setKeys(keys);
-    
-            // Attacher l'animation à l'objet
-            pickedObject.animations = [];
-            pickedObject.animations.push(animation);
-    
-            // Lancer l'animation
-            this.isAnimating = true;
-            this._scene.beginAnimation(pickedObject, 0, animationDuration, false).onAnimationEnd = () => {
-                this.isAnimating = false;
-            };
-        }    
-
-        private canExaminePlanks(object: AbstractMesh) :boolean{
-            let parent = object.parent;
-            for (let i = 0; i < 2; i++) {
-                if (!parent || !parent.name) {
-                    // No more parents to check, exit the loop
-                    break;
-                }
-                // Check if the parent's name is in the allowed list
-                if (["Plank", "Plank (1)", "Plank (2)", "Plank (3)","Plank (4)"].includes(object.name)) {
-                    return true;
-                }
-    
-                // Move up to the next parent
-                parent = parent.parent;
-            }
-            return false;
         }
+
+
+
+        // Création de la liste des frames de l'animation
+        const keys: IAnimationKey[] = [
+            { frame: 0, value: initialPosition }, // Frame initiale
+            { frame: animationDuration, value: targetPosition } // Frame finale
+        ];
+
+        // Ajout des frames à l'animation
+        animation.setKeys(keys);
+
+        // Attacher l'animation à l'objet
+        pickedObject.animations = [];
+        pickedObject.animations.push(animation);
+
+        // Lancer l'animation
+        this.isAnimating = true;
+        this._scene.beginAnimation(pickedObject, 0, animationDuration, false).onAnimationEnd = () => {
+            this.isAnimating = false;
+        };
+    }
+
+    private canExaminePlanks(object: AbstractMesh): boolean {
+        let parent = object.parent;
+        for (let i = 0; i < 2; i++) {
+            if (!parent || !parent.name) {
+                // No more parents to check, exit the loop
+                break;
+            }
+            // Check if the parent's name is in the allowed list
+            if (["Plank", "Plank (1)", "Plank (2)", "Plank (3)", "Plank (4)"].includes(object.name)) {
+                return true;
+            }
+
+            // Move up to the next parent
+            parent = parent.parent;
+        }
+        return false;
+    }
 
 }

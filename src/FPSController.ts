@@ -1,4 +1,4 @@
-import { Animation, Tools, RayHelper, EasingFunction, CannonJSPlugin, IAnimationKey, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
+import { Animation, Tools, RayHelper, EasingFunction, CannonJSPlugin, MeshBuilder, StandardMaterial, InstancedMesh, PointParticleEmitter, IAnimationKey, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
 import { float } from "babylonjs";
 import { Boss } from "./Boss";
 import { Enemy } from "./Enemy";
@@ -6,6 +6,7 @@ import { Mutant } from "./Mutant";
 import { PlayerHealth } from "./PlayerHealth";
 import { Zombie } from "./Zombie";
 import * as cannon from 'cannon';
+import { Button, Control, Rectangle, AdvancedDynamicTexture, TextBlock, Grid } from "@babylonjs/gui";
 
 
 enum CharacterState {
@@ -58,9 +59,13 @@ export class FPSController {
     private _keySound: Sound;
     private _doorunlockSound: Sound;
     private _lockedSound: Sound;
+    private _lanternSound: Sound;
 
     //headLight
     private _light: SpotLight;
+    private bougieLight: PointLight;
+    private lanternLight: PointLight;
+    private feu: ParticleSystem;
     //private _gun_Flash: SpotLight;
 
     // animation trackers
@@ -136,10 +141,9 @@ export class FPSController {
         this.createController();
         this.InitCameraKeys();
         this.keyboardInput();
-        this.setupFlashlight();
+        this.setuplight();
         this.setupAllMeshes();
-        this.handleInteraction()
-        this.createExaminationHUD()
+        this.handleInteraction();
         this.update();
 
         this.i = 0;
@@ -167,6 +171,7 @@ export class FPSController {
         this._keySound = new Sound("key", "sounds/key.mp3", this._scene);
         this._doorunlockSound = new Sound("doorunlock", "sounds/doorunlock.mp3", this._scene);
         this._lockedSound = new Sound("locked", "sounds/locked.mp3", this._scene);
+        this._lanternSound = new Sound("lantern", "sounds/lantern.mp3", this._scene);
     }
     /**
      * launched every 60ms 
@@ -185,8 +190,8 @@ export class FPSController {
                     this.runSpeed = 0.2;
                     this.walk(this.walkSpeed);
                 } else {
-                    this.walkSpeed = 3;
-                    this.runSpeed = 4;
+                    this.walkSpeed = 1;
+                    this.runSpeed = 2.2;
                 }
                 if (!this.isFiring) {
 
@@ -306,7 +311,7 @@ export class FPSController {
             case "flashlight":
                 this.createFlashlight();
                 break;
-            case "pistol":
+            case "candle":
                 this.createCandle();
                 break;
             case "lantern":
@@ -348,12 +353,27 @@ export class FPSController {
                             }
                             break;
                         case 'f':
-                            this._flashlightSound.play();
-                            if (this._light.intensity === 5000) {
-                                this._light.intensity = 0;
-                            } else {
-                                this._light.intensity = 5000;
+                            console.log(this._weapon.getChildMeshes()[0]?.name);
+                            if (this._weapon.getChildMeshes()[0]?.name === "Flashlight2_Body") {
+                                if (this.lanternLight.isEnabled()) {
+                                    this.lantern(false);
+                                } else {
+                                    this.lantern(true);
+                                }
+                            } if (this._weapon.getChildMeshes()[0]?.name === "Candle_Mesh") {
+                                if (this.bougieLight.isEnabled()) {
+                                    this.bougie(false);
+                                } else {
+                                    this.bougie(true);
+                                }
+                            } if (this._weapon.getChildMeshes()[0]?.name === "Arm_mesh001") {
+                                if (this._light.isEnabled()) {
+                                    this.flashlight(false);
+                                } else {
+                                    this.flashlight(true);
+                                }
                             }
+                            break;
                             break;
                         case '&':
                             if (this._cooldown_fire <= this._cooldown_time / 60) {
@@ -431,11 +451,52 @@ export class FPSController {
     /**
      * create the flashlight
      */
-    private setupFlashlight() {
-        this._light = new SpotLight("spotLight", new Vector3(0, 1, 0), new Vector3(0, 0, 1), Math.PI / 3, 2, this._scene);
-        this._light.intensity = 0;
+    private setuplight() {
+        this._light = new SpotLight("flashlight", new Vector3(0, 1, 0), new Vector3(0, 0, 1), Math.PI / 3, 2, this._scene);
+        this._light.intensity = 500;
+        this._light.setEnabled(false);
+        this.bougieLight = new PointLight("bougie", new Vector3(0, 2, 0), this._scene);
+        this.bougieLight.intensity = 12;
+        this.bougieLight.setEnabled(false);
+        this.lanternLight = new PointLight("lantern", new Vector3(0, -1, 0), this._scene);
+        this.lanternLight.intensity = 150;
+        this.lanternLight.setEnabled(false);
+
+
+        this.lanternLight.parent = this._camera;
         this._light.parent = this._camera;
+        this.bougieLight.parent = this._camera;
     }
+
+    private bougie(bool: boolean) {
+        if (bool) {
+            this.feu.start();
+        }
+        else {
+            this.feu.stop();
+        }
+        this.bougieLight.setEnabled(bool);
+    }
+
+    private flashlight(bool: boolean) {
+        this._flashlightSound.play();
+        this._light.setEnabled(bool);
+    }
+    private lantern(bool: boolean) {
+        if (bool) {
+            this._lanternSound.play();
+            setTimeout(() => {
+                this.lanternLight.setEnabled(bool);
+            }
+                , 1500);
+        }
+        else {
+            this.lanternLight.setEnabled(bool);
+        }
+
+    }
+
+
 
     /**
      * zombie's meshes, used to know if the zombie is hit
@@ -546,6 +607,7 @@ export class FPSController {
         // Activer la première arme (candle dans cet exemple)
         this.allWeapons[0].setEnabled(true);
         this._weapon = this.allWeapons[0];
+        this.createFlareCandle(this.allWeapons[0]);
     }
 
 
@@ -845,6 +907,8 @@ export class FPSController {
                             this.swap(this._weapon, "lantern");
                             this.firstChild = this._weapon;
                             this.examiningObject = false;
+                            this._light.setEnabled(false);
+                            this.bougieLight.setEnabled(false);
 
                             // Hide the examination HUD
                             //document.getElementById("examination-hud").style.display = "none";
@@ -859,6 +923,8 @@ export class FPSController {
                             this.swap(this._weapon, "flashlight");
                             this.firstChild = this._weapon;
                             this.examiningObject = false;
+                            this.lanternLight.setEnabled(false);
+                            this.bougieLight.setEnabled(false);
 
                             // Hide the examination HUD
                             //document.getElementById("examination-hud").style.display = "none";
@@ -1176,6 +1242,7 @@ export class FPSController {
                 }
             }
             else {
+                this.createPuzzleGame();
                 this._lockedSound.play();
                 return;
             }
@@ -1244,46 +1311,216 @@ export class FPSController {
         return false;
     }
 
+    private createFlareCandle(candleMesh: AbstractMesh) {
+        this.feu = new ParticleSystem("feu", 2000, this._scene);
 
-    private createExaminationHUD(): void {
-        // Create the HUD element if it does not exist
-        var hud = document.getElementById("examination-hud");
-        if (!hud) {
-            hud = document.createElement("div");
+        this.feu.particleTexture = new Texture("sprites/flare2.png", this._scene);
 
-            // Assign the id
-            hud.id = "examination-hud";
+        // Create a small, invisible box
+        let emitterBox = MeshBuilder.CreateBox("emitterBox", { size: 0.1 }, this._scene);
+        emitterBox.isVisible = false;
 
-            // Set the initial style
-            hud.style.display = "none";
-            hud.style.position = "fixed";
-            hud.style.top = "0";
-            hud.style.left = "0";
-            hud.style.width = "100%";
-            hud.style.height = "100%";
-            hud.style.background = "none"; // Remove the dark background
-            hud.style.color = "white";
-            hud.style.fontSize = "2em";
-            hud.style.padding = "1em";
-            hud.style.boxSizing = "border-box";
-            hud.style.overflowY = "auto";
-            hud.style.border = "2px solid red"; // Add an eerie red border
+        // Attach it to the candle
+        emitterBox.parent = candleMesh;
 
-            // Set the initial content with horror-themed style and icons
-            hud.innerHTML = `
-    <h1 style="text-align: center; font-size: 2.5em; font-family: 'Horror Font', cursive;">Examination</h1>
-    <p style="font-family: 'Horror Font', cursive;">Object details...</p>
-    <div style="text-align: center;">
-  `;
+        // Position it slightly in front and above the candle
+        emitterBox.position = new Vector3(0.13, 1.63, -0.63);
 
-            // Add the HUD to the body
-            document.body.appendChild(hud);
-        }
+        // Use the box as the emitter
+        this.feu.emitter = emitterBox;
 
+        // Create a point emitter
+        var emitter = new PointParticleEmitter();
+        emitter.direction1 = new Vector3(0.0, 0.2, 0.0);
+        emitter.direction2 = new Vector3(0.0, 0.3, 0.0);
+        // Use the point as the emitter
+        this.feu.particleEmitterType = emitter;
+
+        // Configure other particle system properties
+        // Colors of a real flame
+        this.feu.color1 = new Color4(1.0, 1.0, 0.0, 1.0);
+        this.feu.color2 = new Color4(1.0, 0.66, 0.66, 1.0);
+        this.feu.colorDead = new Color4(1.0, 0.22, 0.22, 0.2);
+
+        this.feu.minSize = 0.01; // Smaller particles for a finer flame
+        this.feu.maxSize = 0.03; // Smaller particles for a finer flame
+
+
+        this.feu.blendMode = ParticleSystem.BLENDMODE_STANDARD;
+
+        this.feu.gravity = new Vector3(0, -0.5, 0);
+
+        this.feu.minAngularSpeed = 0;
+        this.feu.maxAngularSpeed = Math.PI;
+
+        this.feu.minLifeTime = 0.02; // Shorter lifetime for particles
+        this.feu.maxLifeTime = 0.1; // Shorter lifetime for particles
+
+        this.feu.emitRate = 700; // Lower emission rate
+
+        this.feu.updateSpeed = 0.01; // Faster update speed
+
+
+        this.feu.minEmitPower = 0.5;
+        this.feu.maxEmitPower = 1.5;
 
     }
 
+    public diableCarpet() {
+        const rugNames = ["VictorianRug", "VictorianRug (1)", "VictorianRug (2)"];
+        const instancedMeshes = [];
+
+        rugNames.forEach((name) => {
+            const instancedMesh = this._scene.getMeshByName(name) as InstancedMesh;
+            if (instancedMesh) {
+                instancedMeshes.push(instancedMesh);
+            }
+        });
+
+        // Set collision to false for each InstancedMesh
+        instancedMeshes.forEach((instancedMesh) => {
+            instancedMesh.checkCollisions = false;
+        });
+    }
 
 
+    private puzzleHUDVisible: boolean = false;
+    private advancedTexture: AdvancedDynamicTexture;
+
+    private createPuzzleGame(): void {
+        const targetCode = [3, 2, 2, 3]; // Code cible pour ouvrir la porte
+        const enteredCode: number[] = []; // Code entré par le joueur
+
+        // Créer une interface utilisateur en utilisant AdvancedDynamicTexture
+        this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
+        // Créer le conteneur principal
+        const container = new Rectangle();
+        container.width = "400px";
+        container.height = "300px";
+        container.color = "white";
+        container.thickness = 4;
+        container.cornerRadius = 20;
+        container.background = "#282c34";
+        container.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        this.advancedTexture.addControl(container);
+
+        // Titre du jeu
+        const title = new TextBlock();
+        title.text = "Enter Door Code";
+        title.fontSize = 24;
+        title.color = "white";
+        title.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        container.addControl(title);
+
+        // Créer une grille pour contenir les boutons
+        const grid = new Grid();
+        grid.addColumnDefinition(0.33);
+        grid.addColumnDefinition(0.33);
+        grid.addColumnDefinition(0.33);
+        grid.addRowDefinition(0.25);
+        grid.addRowDefinition(0.25);
+        grid.addRowDefinition(0.25);
+        grid.addRowDefinition(0.25);
+        container.addControl(grid);
+
+        // Créer les boutons numériques
+        for (let i = 1; i <= 9; i++) {
+            const button = Button.CreateSimpleButton("button" + i, i.toString());
+            button.width = "100px";
+            button.height = "100px";
+            button.color = "white";
+            button.fontSize = 32;
+            button.cornerRadius = 10;
+            button.background = "#61dafb";
+            button.onPointerUpObservable.add(() => {
+                if (this.puzzleHUDVisible) {
+                    enteredCode.push(i);
+                    if (enteredCode.length === 4) {
+                        if (this.isCodeCorrect(enteredCode, targetCode)) {
+                            alert("Door opened!");
+                            //this.OuvrePorte(); // Ajoutez cette ligne ici
+                        } else {
+                            alert("Incorrect code!");
+                            enteredCode.length = 0; // Réinitialiser le code entré
+                        }
+                        enteredCode.length = 0; // Réinitialiser le code entré
+                    }
+                }
+            });
+            grid.addControl(button, Math.floor((i - 1) / 3), (i - 1) % 3);
+        }
+
+        // Créer le bouton pour effacer le dernier chiffre
+        const clearButton = Button.CreateSimpleButton("clearButton", "Clear");
+        clearButton.width = "100px";
+        clearButton.height = "100px";
+        clearButton.color = "white";
+        clearButton.fontSize = 32;
+        clearButton.cornerRadius = 10;
+        clearButton.background = "#61dafb";
+        clearButton.onPointerUpObservable.add(() => {
+            if (this.puzzleHUDVisible) {
+                enteredCode.pop();
+            }
+        });
+        grid.addControl(clearButton, 3, 1);
+
+        // Gérer l'affichage du HUD lorsqu'une touche est enfoncée
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "e") {
+                // Autres actions...
+            } else if (["z", "q", "s", "d"].includes(event.key)) {
+                this.puzzleHUDVisible = false;
+                container.isVisible = false;
+            }
+        };
+        const handleMouseUp = (event: MouseEvent) => {
+            if (this.puzzleHUDVisible) {
+                const canvas = this._scene.getEngine().getRenderingCanvas();
+                const pointerX = event.clientX - canvas.getBoundingClientRect().left;
+                const pointerY = event.clientY - canvas.getBoundingClientRect().top;
+                const containerX = container.leftInPixels;
+                const containerY = container.topInPixels;
+                const containerWidth = container.widthInPixels;
+                const containerHeight = container.heightInPixels;
+                const isClickedInsideContainer =
+                    pointerX >= containerX &&
+                    pointerX <= containerX + containerWidth &&
+                    pointerY >= containerY &&
+                    pointerY <= containerY + containerHeight;
+
+                if (!isClickedInsideContainer) {
+                    this.puzzleHUDVisible = false;
+                    container.isVisible = false;
+                    canvas.style.cursor = "none"; // Cacher à nouveau la souris
+                    canvas.removeEventListener("mouseup", handleMouseUp);
+                    document.exitPointerLock(); // Libérer le pointeur
+                }
+            }
+        };
+
+
+
+
+
+
+        // Ajouter les écouteurs d'événements
+        const canvas = this._scene.getEngine().getRenderingCanvas();
+        canvas.addEventListener("keydown", handleKeyDown);
+    }
+
+    private isCodeCorrect(enteredCode: number[], targetCode: number[]): boolean {
+        if (enteredCode.length !== targetCode.length) {
+            return false;
+        }
+        for (let i = 0; i < enteredCode.length; i++) {
+            if (enteredCode[i] !== targetCode[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 
 }

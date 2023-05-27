@@ -28,8 +28,8 @@ class App {
     private _light1: Light;
     private _skyboxMaterial: SkyMaterial;
     private _gameScene: Scene;
-    private _ambianceMusic: Sound;
-    private _dayAmbianceMusic: Sound;
+    private _fightAmbianceMusic: Sound;
+    private _horrorAmbianceMusic: Sound;
     private _round: Round;
     private _cooldown: int = 30000;
     private _currentRound: int = 1;
@@ -227,14 +227,14 @@ class App {
         light1.range = 100;
         this._light1 = light1;
 
-        this._dayAmbianceMusic = new Sound("dayAmbianceMusic", "sounds/sunnyday.mp3", this._scene, null, {
+        this._horrorAmbianceMusic = new Sound("horror", "sounds/horror.mp3", this._scene, null, {
             loop: true,
             autoplay: false,
-            volume: 0.07
+            volume: 0.5
         });
 
         //sound         
-        this._ambianceMusic = new Sound("ambianceMusic", "sounds/music.mp3", this._scene, null, {
+        this._fightAmbianceMusic = new Sound("fight", "sounds/fight.mp3", this._scene, null, {
             loop: true,
             autoplay: false,
             volume: 0.8
@@ -349,10 +349,10 @@ class App {
         this._engine.hideLoadingUI();
         //AFTER LOADING
         this._scene.debugLayer.show();
-
+        this._fps.diableCarpet();
         this._scene.attachControl();
         this.disableEnemies();
-        this._round = new Round(this._scene, this._canvas, this._light1, this._skyboxMaterial, this._ambianceMusic, this._dayAmbianceMusic);
+        this._round = new Round(this._scene, this._canvas, this._light1, this._skyboxMaterial, this._fightAmbianceMusic, this._horrorAmbianceMusic);
         this.day();
         this.update();
         const guiGame = AdvancedDynamicTexture.CreateFullscreenUI("UI");

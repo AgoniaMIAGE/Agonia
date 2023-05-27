@@ -6,7 +6,7 @@ import { Mutant } from "./Mutant";
 import { PlayerHealth } from "./PlayerHealth";
 import { Zombie } from "./Zombie";
 import * as cannon from 'cannon';
-import { Button, Control, Rectangle, AdvancedDynamicTexture, TextBlock, Grid } from "@babylonjs/gui";
+import { Button, Control, Rectangle, AdvancedDynamicTexture, TextBlock, Grid,StackPanel } from "@babylonjs/gui";
 
 
 enum CharacterState {
@@ -60,6 +60,16 @@ export class FPSController {
     private _doorunlockSound: Sound;
     private _lockedSound: Sound;
     private _lanternSound: Sound;
+    private _plankBreak: Sound;
+    private _radioSound: Sound;
+    private _phoneSound: Sound;
+    private _paperSound: Sound;
+    private _putObjectSound: Sound;
+    private _glassBottleSound: Sound;
+    private _itemPickUpSound: Sound;
+    private _axeSound: Sound;
+    private _bookSound: Sound;
+    private _appleSound: Sound;
 
     //headLight
     private _light: SpotLight;
@@ -110,6 +120,7 @@ export class FPSController {
     private _pistol: AbstractMesh;
     private _rifle: AbstractMesh;
     private allWeapons: AbstractMesh[] = [];
+    private torcheOn : boolean; // à remplacer par axeOn
 
 
     //examining object 
@@ -172,6 +183,16 @@ export class FPSController {
         this._doorunlockSound = new Sound("doorunlock", "sounds/doorunlock.mp3", this._scene);
         this._lockedSound = new Sound("locked", "sounds/locked.mp3", this._scene);
         this._lanternSound = new Sound("lantern", "sounds/lantern.mp3", this._scene);
+        this._plankBreak = new Sound("plankbreak","sounds/plankbreak.mp3",this._scene);
+        this._radioSound = new Sound("scaryradio","sounds/scaryradio.mp3",this._scene);
+        this._bookSound = new Sound("book","sounds/book.mp3",this._scene);
+        this._axeSound = new Sound("axe","sounds/axe.mp3",this._scene);
+        this._glassBottleSound = new Sound("glassbottle","sounds/glassbottle.mp3",this._scene);
+        this._itemPickUpSound = new Sound("itempickup","sounds/itempickup.mp3",this._scene);
+        this._paperSound = new Sound("paper","sounds/paper.mp3",this._scene);
+        this._phoneSound = new Sound("phone","sounds/phone.mp3",this._scene);
+        this._putObjectSound = new Sound("putobject","sounds/putobject.mp3",this._scene);
+        this._appleSound = new Sound("apple","sounds/apple.mp3",this._scene);
     }
     /**
      * launched every 60ms 
@@ -896,7 +917,7 @@ export class FPSController {
 
     private handleInteraction(): void {
         this._scene.onKeyboardObservable.add((kbInfo) => {
-            if (kbInfo.type === KeyboardEventTypes.KEYDOWN && kbInfo.event.key === 'e') {
+            if (kbInfo.type === KeyboardEventTypes.KEYDOWN && kbInfo.event.key === 'e' || kbInfo.event.key === 'E') {
                 if (this.mouseMoveListener) {
                     this._canvas.removeEventListener("mousemove", this.mouseMoveListener);
                     this.mouseMoveListener = null;
@@ -919,6 +940,7 @@ export class FPSController {
                             this.enableCameraMovement();
                         }
                         if (this.examiningObjectMesh.name === "IA_Flashlight_primitive0") {
+                            this.torcheOn=true;///à remplacer par la hache
                             this.examiningObjectMesh.setEnabled(false);
                             this.swap(this._weapon, "flashlight");
                             this.firstChild = this._weapon;
@@ -945,7 +967,10 @@ export class FPSController {
                             this._keySound.play();
                         }
                         else {
-
+                            if(this.examiningObjectMesh.name==="Radio")
+                            {
+                                this._radioSound.stop();
+                            }
                             // If already examining an object, put it back to its initial position and rotation
                             this.examiningObjectMesh.parent = this._scene.getTransformNodeByName(this.lastParentName);
                             this.examiningObjectMesh.position = this.initialPosition;
@@ -1009,13 +1034,41 @@ export class FPSController {
                                 console.log(pickedObject.name);
                                 if (this.isOpen) {
                                     this.closeChestOfDrawers(pickedObject);
+                                    if(pickedObject.name === "Drawer1" && this.oilOpen){
+                                        this.closeOil();
+                                        this.oilOpen=false;
+                                    }
+                                    if(pickedObject.name === "Drawer1.002" && this.batteryFlashlightOpen)
+                                    {
+                                       this.closeBattery();
+                                       this.closeFlashlight();
+                                       this.batteryFlashlightOpen=false;
+                                    }
+                                    this.isOpen = false;
+
                                 } else {
                                     this.openChestOfDrawers(pickedObject);
+                                    if(pickedObject.name === "Drawer1" && !this.oilOpen){
+                                        this.openOil();
+                                        this.oilOpen=true;
+                                    }
+                                    if(pickedObject.name === "Drawer1.002" && !this.batteryFlashlightOpen)
+                                    {
+                                       this.openBattery();
+                                       this.openFlashlight();
+                                       this.batteryFlashlightOpen = true;
+                                    }
+                                    this.isOpen = true;
                                 }
                             }
                         }
                         if (pickInfo && pickInfo.hit && this.canExamineDoor(pickInfo.pickedMesh)) {
                             this.openDoor(pickInfo.pickedMesh);
+                        }
+                        if(pickInfo && pickInfo.hit && this.canExaminePlanks(pickInfo.pickedMesh) && this.torcheOn){
+                            pickInfo.pickedMesh.setEnabled(false);
+                            this._plankBreak.setVolume(0.2);
+                            this._plankBreak.play();
                         }
                     }
                 }
@@ -1025,6 +1078,8 @@ export class FPSController {
 
     private isAnimating = false;
     private isOpen = false;
+    private oilOpen = false;
+    private batteryFlashlightOpen = false;
 
     private openChestOfDrawers(pickedObject: AbstractMesh) {
         if (this.isAnimating) {
@@ -1117,6 +1172,44 @@ export class FPSController {
         object.parent = this._camera;
         object.position = new Vector3(0, 0, 0.5);
         object.scaling.z = Math.abs(object.scaling.z) * -1;
+
+        this.examiningObject = true;
+        if(object.name==="Radio")
+        {
+            this._radioSound.play();
+        }
+        if(object.name==="Paper_01" || object.name === "PaperBent_A")
+        {
+            this._paperSound.play();
+        }
+        if(object.name==="IC_PetrolOilBottle")
+        {
+            this._glassBottleSound.play();
+        }
+        if(object.name==="Budha")
+        {
+            this._putObjectSound.play();
+        }
+        if(object.name==="Telephone01")
+        {
+            this._phoneSound.play();
+        }
+        if(object.name==="IH_Apple" || object.name==="IH_Banana")
+        {
+            this._appleSound.play();
+        }
+        if(object.name==="IA_Axe")
+        {
+            this._axeSound.play();
+        }
+        if(object.name==="IR_Battery01" || object.name==="IR_Battery01 (1)")
+        {
+            this._itemPickUpSound.play();
+        }
+        if(object.name==="Book_01.001" || object.name==="Book_02.001" || object.name==="Book_03.001" || object.name==="Book_04.001")
+        {
+            this._bookSound.play();
+        }
 
         this.examiningObject = true;
     }
@@ -1384,143 +1477,252 @@ export class FPSController {
     }
 
 
-    private puzzleHUDVisible: boolean = false;
-    private advancedTexture: AdvancedDynamicTexture;
-
     private createPuzzleGame(): void {
-        const targetCode = [3, 2, 2, 3]; // Code cible pour ouvrir la porte
-        const enteredCode: number[] = []; // Code entré par le joueur
 
-        // Créer une interface utilisateur en utilisant AdvancedDynamicTexture
-        this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        // Create a 2D advanced texture to hold the GUI controls
+        let advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        this._scene
 
-        // Créer le conteneur principal
-        const container = new Rectangle();
-        container.width = "400px";
-        container.height = "300px";
-        container.color = "white";
-        container.thickness = 4;
-        container.cornerRadius = 20;
-        container.background = "#282c34";
-        container.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-        container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        this.advancedTexture.addControl(container);
+        // Create a stack panel to hold the buttons
+        let panel = new StackPanel();
+        panel.width = "220px";
+        panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        advancedTexture.addControl(panel);
 
-        // Titre du jeu
-        const title = new TextBlock();
-        title.text = "Enter Door Code";
-        title.fontSize = 24;
-        title.color = "white";
-        title.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        container.addControl(title);
+        // The code that the user needs to enter
+        const correctCode = "3223";
 
-        // Créer une grille pour contenir les boutons
-        const grid = new Grid();
-        grid.addColumnDefinition(0.33);
-        grid.addColumnDefinition(0.33);
-        grid.addColumnDefinition(0.33);
-        grid.addRowDefinition(0.25);
-        grid.addRowDefinition(0.25);
-        grid.addRowDefinition(0.25);
-        grid.addRowDefinition(0.25);
-        container.addControl(grid);
+        // The code that the user has entered
+        let enteredCode = "";
 
-        // Créer les boutons numériques
-        for (let i = 1; i <= 9; i++) {
-            const button = Button.CreateSimpleButton("button" + i, i.toString());
-            button.width = "100px";
-            button.height = "100px";
+        // TextBlock to display the entered code
+        let codeDisplay = new TextBlock();
+        codeDisplay.text = enteredCode;
+        codeDisplay.color = "white";
+        panel.addControl(codeDisplay);
+        document.exitPointerLock();
+
+
+        // Add buttons for each digit
+        for (let i = 0; i < 10; i++) {
+            let button = Button.CreateSimpleButton("button" + i, String(i));
+            button.width = "50px";
+            button.height = "50px";
             button.color = "white";
-            button.fontSize = 32;
-            button.cornerRadius = 10;
-            button.background = "#61dafb";
-            button.onPointerUpObservable.add(() => {
-                if (this.puzzleHUDVisible) {
-                    enteredCode.push(i);
-                    if (enteredCode.length === 4) {
-                        if (this.isCodeCorrect(enteredCode, targetCode)) {
-                            alert("Door opened!");
-                            //this.OuvrePorte(); // Ajoutez cette ligne ici
-                        } else {
-                            alert("Incorrect code!");
-                            enteredCode.length = 0; // Réinitialiser le code entré
-                        }
-                        enteredCode.length = 0; // Réinitialiser le code entré
-                    }
-                }
+            button.background = "black";
+            button.onPointerUpObservable.add(function () {
+                // When the button is clicked, add its number to the entered code
+                enteredCode += String(i);
+                codeDisplay.text = enteredCode;
+                console.log("Clicked button " + i);
             });
-            grid.addControl(button, Math.floor((i - 1) / 3), (i - 1) % 3);
+            panel.addControl(button);
         }
 
-        // Créer le bouton pour effacer le dernier chiffre
-        const clearButton = Button.CreateSimpleButton("clearButton", "Clear");
-        clearButton.width = "100px";
-        clearButton.height = "100px";
+        // Add a button to clear the last digit
+        let clearButton = Button.CreateSimpleButton("clearButton", "Clear last");
+        clearButton.width = "220px";
+        clearButton.height = "50px";
         clearButton.color = "white";
-        clearButton.fontSize = 32;
-        clearButton.cornerRadius = 10;
-        clearButton.background = "#61dafb";
-        clearButton.onPointerUpObservable.add(() => {
-            if (this.puzzleHUDVisible) {
-                enteredCode.pop();
-            }
+        clearButton.background = "orange";
+        clearButton.onPointerUpObservable.add(function () {
+            // When the clear button is clicked, remove the last digit from the entered code
+            enteredCode = enteredCode.slice(0, -1);
+            codeDisplay.text = enteredCode;
+            console.log("Cleared last digit");
         });
-        grid.addControl(clearButton, 3, 1);
+        panel.addControl(clearButton);
 
-        // Gérer l'affichage du HUD lorsqu'une touche est enfoncée
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === "e") {
-                // Autres actions...
-            } else if (["z", "q", "s", "d"].includes(event.key)) {
-                this.puzzleHUDVisible = false;
-                container.isVisible = false;
+        // Add a button to reset the code
+        let resetButton = Button.CreateSimpleButton("resetButton", "Reset");
+        resetButton.width = "220px";
+        resetButton.height = "50px";
+        resetButton.color = "white";
+        resetButton.background = "red";
+        resetButton.onPointerUpObservable.add(function () {
+            // When the reset button is clicked, clear the entered code
+            enteredCode = "";
+            codeDisplay.text = enteredCode;
+            console.log("Code reset");
+        });
+        panel.addControl(resetButton);
+
+        // Add a button for "Enter"
+        let enterButton = Button.CreateSimpleButton("enterButton", "Enter");
+        enterButton.width = "220px";
+        enterButton.height = "50px";
+        enterButton.color = "white";
+        enterButton.background = "green";
+        enterButton.onPointerUpObservable.add(function () {
+            // When the "Enter" button is clicked, check if the entered code is correct
+            if (enteredCode === correctCode) {
+                console.log("Correct code entered!");
+            } else {
+                console.log("Incorrect code. Try again.");
             }
-        };
-        const handleMouseUp = (event: MouseEvent) => {
-            if (this.puzzleHUDVisible) {
-                const canvas = this._scene.getEngine().getRenderingCanvas();
-                const pointerX = event.clientX - canvas.getBoundingClientRect().left;
-                const pointerY = event.clientY - canvas.getBoundingClientRect().top;
-                const containerX = container.leftInPixels;
-                const containerY = container.topInPixels;
-                const containerWidth = container.widthInPixels;
-                const containerHeight = container.heightInPixels;
-                const isClickedInsideContainer =
-                    pointerX >= containerX &&
-                    pointerX <= containerX + containerWidth &&
-                    pointerY >= containerY &&
-                    pointerY <= containerY + containerHeight;
-
-                if (!isClickedInsideContainer) {
-                    this.puzzleHUDVisible = false;
-                    container.isVisible = false;
-                    canvas.style.cursor = "none"; // Cacher à nouveau la souris
-                    canvas.removeEventListener("mouseup", handleMouseUp);
-                    document.exitPointerLock(); // Libérer le pointeur
-                }
-            }
-        };
-
-
-
-
-
-
-        // Ajouter les écouteurs d'événements
-        const canvas = this._scene.getEngine().getRenderingCanvas();
-        canvas.addEventListener("keydown", handleKeyDown);
+            // Reset the entered code
+            enteredCode = "";
+            codeDisplay.text = enteredCode;
+        });
+        panel.addControl(enterButton);
     }
 
-    private isCodeCorrect(enteredCode: number[], targetCode: number[]): boolean {
-        if (enteredCode.length !== targetCode.length) {
+    private openOil()
+    {
+        const object =  this._scene.getMeshByName("IC_OilBottle");
+        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const initialZ = object.position.z; // Position initiale de l'objet
+        const targetZ = initialZ+0.5; // Position finale de l'ouverture du tiroir
+
+        this.animationPosition(object,initialZ,targetZ,animationDuration,false,false);
+    }
+
+    private closeOil()
+    {
+        const object =  this._scene.getMeshByName("IC_OilBottle");
+        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const initialZ = object.position.z; // Position initiale de l'objet
+        const targetZ = initialZ-0.5; // Position finale de l'ouverture du tiroir
+
+        this.animationPosition(object,initialZ,targetZ,animationDuration,false,false);
+    }
+
+    private openBattery()
+    {
+        const object =  this._scene.getMeshByName("IR_Battery01");
+        const object2 =  this._scene.getMeshByName("IR_Battery01 (1)");
+        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const initialX = object.position.x; // Position initiale de l'objet
+        const targetX = initialX+0.5; // Position finale de l'ouverture du tiroir
+
+        this.animationPosition(object,initialX,targetX,animationDuration,true,false);
+        this.animationPosition(object2,initialX,targetX,animationDuration,true,false);
+    }
+
+    private closeBattery()
+    {
+        const object =  this._scene.getMeshByName("IR_Battery01");
+        const object2 =  this._scene.getMeshByName("IR_Battery01 (1)");
+        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const initialX = object.position.x; // Position initiale de l'objet
+        const targetX = initialX-0.5; // Position finale de l'ouverture du tiroir
+
+        this.animationPosition(object,initialX,targetX,animationDuration,true,false);
+        this.animationPosition(object2,initialX,targetX,animationDuration,true,false);
+    }
+    
+
+    private openFlashlight()
+    {
+        const object =  this._scene.getMeshByName("IA_Flashlight_primitive0");
+        const object2 =  this._scene.getMeshByName("IA_Flashlight_primitive1");
+        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const initialX = object.position.x; // Position initiale de l'objet
+        const targetX = initialX+0.20; // Position finale de l'ouverture du tiroir
+        const initialZ = object.position.z;
+        const targetZ = initialZ+0.04;
+
+        this.animationPosition(object,initialX,targetX,animationDuration,true,false);
+        this.animationPosition(object2,initialX,targetX,animationDuration,true,false);
+    }
+
+    private closeFlashlight()
+    {
+        const object =  this._scene.getMeshByName("IA_Flashlight_primitive0");
+        const object2 =  this._scene.getMeshByName("IA_Flashlight_primitive1");
+        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const initialX = object.position.x; // Position initiale de l'objet
+        const targetX = initialX-0.20; // Position finale de l'ouverture du tiroir
+        const initialZ = object.position.z;
+        const targetZ = initialZ-0.04;
+
+        this.animationPosition(object,initialX,targetX,animationDuration,true,false);
+        this.animationPosition(object2,initialX,targetX,animationDuration,true,false);
+    }
+
+        /**
+     * 
+     * @param pickedObject 
+     * @param initialPosition 
+     * @param targetPosition 
+     * @param animationDuration 
+     * @param x boolean pour savoir s'il move sur cet axe
+     * @param y boolean pour savoir s'il move sur cet axe
+     * dans le cas z, x et y seront false
+     */
+        private animationPosition(pickedObject : AbstractMesh, initialPosition : number, targetPosition : number, animationDuration, x : boolean, y : boolean)
+        {
+            var animation;
+            if(x){
+                 // Création de l'animation
+                animation = new Animation(
+                'positionAnimation', // Nom de l'animation
+                'position.x', // Propriété à animer (position.x)
+                60, // Nombre de frames par seconde
+                Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
+                Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+            );
+            }
+            else if(y){
+                 // Création de l'animation
+                animation = new Animation(
+                'positionAnimation', // Nom de l'animation
+                'position.y', // Propriété à animer (position.y)
+                60, // Nombre de frames par seconde
+                Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
+                Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+            );
+            }
+            else{
+                 // Création de l'animation
+                animation = new Animation(
+                'positionAnimation', // Nom de l'animation
+                'position.z', // Propriété à animer (position.z)
+                60, // Nombre de frames par seconde
+                Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
+                Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+            );
+            }
+    
+           
+    
+            // Création de la liste des frames de l'animation
+            const keys: IAnimationKey[] = [
+                { frame: 0, value: initialPosition }, // Frame initiale
+                { frame: animationDuration, value: targetPosition } // Frame finale
+            ];
+    
+            // Ajout des frames à l'animation
+            animation.setKeys(keys);
+    
+            // Attacher l'animation à l'objet
+            pickedObject.animations = [];
+            pickedObject.animations.push(animation);
+    
+            // Lancer l'animation
+            this.isAnimating = true;
+            this._scene.beginAnimation(pickedObject, 0, animationDuration, false).onAnimationEnd = () => {
+                this.isAnimating = false;
+            };
+        }    
+
+        private canExaminePlanks(object: AbstractMesh) :boolean{
+            let parent = object.parent;
+            for (let i = 0; i < 2; i++) {
+                if (!parent || !parent.name) {
+                    // No more parents to check, exit the loop
+                    break;
+                }
+                // Check if the parent's name is in the allowed list
+                if (["Plank", "Plank (1)", "Plank (2)", "Plank (3)","Plank (4)"].includes(object.name)) {
+                    return true;
+                }
+    
+                // Move up to the next parent
+                parent = parent.parent;
+            }
             return false;
         }
-        for (let i = 0; i < enteredCode.length; i++) {
-            if (enteredCode[i] !== targetCode[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
 
 }

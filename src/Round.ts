@@ -26,7 +26,7 @@ export class Round{
                 this._dayAmbianceMusic.play();
             }
             this._skyboxMaterial.luminance = 1;
-            this._light1.intensity = 1;
+            this._light1.intensity = 0.05;
             this._skyboxMaterial.useSunPosition = true; // Do not set sun position from azimuth and inclination
             this._skyboxMaterial.sunPosition = new Vector3(0, 100, 0);
     }

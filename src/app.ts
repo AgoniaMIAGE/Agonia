@@ -351,6 +351,13 @@ class App {
         this._scene.debugLayer.show();
         this._fps.diableCarpet();
         this._scene.attachControl();
+        this._fps.importWeapon(this._scene);
+        this._fps.openDoorAtStart();
+        this._fps.spawnGhost2();
+        this._fps.spawnGhost1();
+        this._fps.spawnboxTrigger1();
+        this._fps.spawnboxTrigger2();
+        this._fps
         this.disableEnemies();
         this._round = new Round(this._scene, this._canvas, this._light1, this._skyboxMaterial, this._fightAmbianceMusic, this._horrorAmbianceMusic);
         this.day();

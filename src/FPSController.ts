@@ -1,5 +1,6 @@
-import { Animation, Tools, RayHelper, EasingFunction, CannonJSPlugin, MeshBuilder, StandardMaterial, InstancedMesh, PointParticleEmitter, IAnimationKey, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
-import { float } from "babylonjs";
+import { Animation, Tools, CreateBox, RayHelper, EasingFunction, CannonJSPlugin, MeshBuilder, StandardMaterial, InstancedMesh, PointParticleEmitter, IAnimationKey, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
+import {  float } from "babylonjs";
+import { SolidParticle } from 'babylonjs/Particles/solidParticle';
 import { Boss } from "./Boss";
 import { Enemy } from "./Enemy";
 import { Mutant } from "./Mutant";
@@ -70,6 +71,11 @@ export class FPSController {
     private _axeSound: Sound;
     private _bookSound: Sound;
     private _appleSound: Sound;
+    private _doorSlamSound: Sound;
+    private _horrorViolinSound: Sound;
+    private _horrorGhostTriggerSound: Sound;
+    private _heartbeatSound: Sound;
+    private _breathingShound: Sound;
 
     //headLight
     private _light: SpotLight;
@@ -109,7 +115,7 @@ export class FPSController {
     private canOpenDoor1: boolean = true;
     private canOpenDoor2: boolean = false;
     private canOpenDoor3: boolean = false;
-    private canOpenDoor4: boolean = false;
+    private canOpenDoor4: boolean = true;
 
     //swap weapons
     private isMeleeWeapon: boolean = false;
@@ -120,7 +126,7 @@ export class FPSController {
     private _pistol: AbstractMesh;
     private _rifle: AbstractMesh;
     private allWeapons: AbstractMesh[] = [];
-    private torcheOn: boolean; // à remplacer par axeOn
+    private axeOn : boolean; // à remplacer par axeOn
 
 
     //examining object 
@@ -128,6 +134,21 @@ export class FPSController {
     private examiningObjectMesh: AbstractMesh;
     private InteractiveObject: TransformNode;
     public oil: AbstractMesh;
+    public doorCpt: number = 0;
+    public doorCpt2: number = 0;
+
+    //ghost
+    private ghostCpt: number = 0;
+    private ghostCpt2: number = 0;
+    private ghostMesh1: AbstractMesh;
+    private ghostMesh2: AbstractMesh;
+    private boxMesh1: Mesh;
+    private boxMesh2: Mesh;
+    private ghostScareAnimation1: AnimationGroup;
+    private ghostTauntAnimation : AnimationGroup;
+    private ghostTurnRightAnimation: AnimationGroup;
+    private ghostCastAnimation: AnimationGroup;
+    private ghostCast01Animation: AnimationGroup;
 
     // firing animation flag
     private isFiring: boolean = false;
@@ -150,7 +171,6 @@ export class FPSController {
         this.createAllWeapons();
         this.createCandle();
         this.createController();
-        this.importWeapon();
         this.InitCameraKeys();
         this.keyboardInput();
         this.setuplight();
@@ -194,6 +214,11 @@ export class FPSController {
         this._phoneSound = new Sound("phone", "sounds/phone.mp3", this._scene);
         this._putObjectSound = new Sound("putobject", "sounds/putobject.mp3", this._scene);
         this._appleSound = new Sound("apple", "sounds/apple.mp3", this._scene);
+        this._doorSlamSound = new Sound("doorslam","sounds/doorslam.mp3",this._scene);
+        this._horrorViolinSound = new Sound("horrorviolin","sounds/horrorviolin.mp3",this._scene);
+        this._horrorGhostTriggerSound = new Sound("horrorghosttrigger","sounds/horrorghosttrigger.mp3",this._scene);
+        this._heartbeatSound = new Sound("heartbeat","sounds/heartbeat.mp3",this._scene);
+        this._breathingShound = new Sound("breathing","sounds/breathing.mp3",this._scene);
     }
     /**
      * launched every 60ms 
@@ -251,6 +276,80 @@ export class FPSController {
                         }
                     }
                 }
+                if(this._camera.position.x >= 20.2)
+                {
+                    if(this.doorCpt===0 && !this.canOpenDoor2)
+                    {
+                        const object = this._scene.getMeshByName("DoorHouse.002")
+                        const animationDuration = 10; // Durée de l'animation en millisecondes
+                        const initialRotationQuaternion = object.rotationQuaternion;
+                        const initialEulerAngles = initialRotationQuaternion.toEulerAngles();
+                        var targetEulerAngles = new Vector3(initialEulerAngles.x, initialEulerAngles.y, initialEulerAngles.z + (Math.PI / 2)); // Ajouter 90 degrés
+                        
+                        this.doorCpt=1;
+
+                        // Création de l'animation
+                        const animation = new Animation(
+                            'rotationAnimation', // Nom de l'animation
+                            'rotationQuaternion', // Propriété à animer (rotationQuaternion)
+                            60, // Nombre de frames par seconde
+                            Animation.ANIMATIONTYPE_QUATERNION, // Type d'animation (quaternion)
+                            Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+                        );
+
+                        const keys = [
+                            { frame: 0, value: initialRotationQuaternion }, // Frame initiale
+                            { frame: animationDuration, value: Quaternion.RotationYawPitchRoll(targetEulerAngles.y, targetEulerAngles.x, targetEulerAngles.z) } // Frame finale
+                        ];
+
+                        // Ajout des frames à l'animation
+                        animation.setKeys(keys);
+
+                        // Attacher l'animation à l'objet
+                        object.animations = [];
+                        object.animations.push(animation);
+
+                        // Lancer l'animation
+                        this.isAnimating = true;
+                        this._scene.beginAnimation(object, 0, animationDuration, false).onAnimationEnd = () => {
+                            this.isAnimating = false;
+                        };
+                        this._doorSlamSound.play();
+                    }
+                    
+                }
+                 if(this.boxMesh1.intersectsPoint(this._camera.position))//trigger ghost1
+                 {
+                    if(this.ghostCpt === 0)
+                    {
+                        this.ghostScareAnimation1.play();
+                        this.disableCameraMovement();
+                        this.animationPositionGhost(this.ghostMesh1,this.ghostMesh1.position.z,this.ghostMesh1.position.z+20,60,false,false);
+                        this._horrorViolinSound.setVolume(3);
+                        this._horrorViolinSound.play();
+                        this.ghostCpt++;
+                    }
+                 }
+                 if(this.boxMesh2.intersectsPoint(this._camera.position))//trigger ghost2
+                 {
+                    if(this.ghostCpt2 === 0)
+                    {
+                        this.ghostMesh2.setEnabled(true);
+                        this.ghostCast01Animation.loopAnimation = false;
+                        this.ghostCastAnimation.loopAnimation = false;  
+                        this._horrorGhostTriggerSound.play();
+                        this.ghostTauntAnimation.start();
+                        this.disableCameraMovement();
+                        this.ghostTauntAnimation.onAnimationGroupEndObservable.add(() => {
+                            this.ghostTurnRightAnimation.start();
+                        });
+                        this.ghostTurnRightAnimation.onAnimationGroupEndObservable.add(() => {
+                            this.animationPositionGhost2(this.ghostMesh2, this.ghostMesh2.position.y, this.ghostMesh2.position.y + 10, 60, false, true);
+                        });
+
+                        this.ghostCpt2++;
+                    }
+                 }
             }, 60);
         });
     }
@@ -260,7 +359,9 @@ export class FPSController {
      * create the camera which represents the player (FPS)
      */
     private createController(): void {
-        this._camera = new FreeCamera("camera", new Vector3(9, 3, 187), this._scene);
+        this._camera = new FreeCamera("camera", new Vector3(3.44, 2.5, 202.65), this._scene);
+        this._camera.rotation.x = 0;
+        this._camera.rotation.y = -4.72;
         this._camera.attachControl(this._canvas, true);
 
         //hitbox + gravity
@@ -646,7 +747,6 @@ export class FPSController {
         result.meshes[0].position = new Vector3(0, -1.7, 0.2);
         result.meshes[0].rotation = new Vector3(0, 0, 0);
         result.meshes[0].scaling = new Vector3(1, 1, -1);
-
         //animations
         this._end = this._scene.getAnimationGroupByName("Candle.Hide");
         this._idle = this._scene.getAnimationGroupByName("Candle.Idle");
@@ -851,7 +951,6 @@ export class FPSController {
 
         //audio effect 
         this._weaponSound = new Sound("attack", "sounds/whoosh.mp3", this._scene);
-
     }
 
 
@@ -973,179 +1072,295 @@ export class FPSController {
     private cameraKeys: { up: number[], down: number[], left: number[], right: number[] };
 
     private handleInteraction(): void {
+        let interactionEnabled = true;
         this._scene.onKeyboardObservable.add((kbInfo) => {
             if (kbInfo.type === KeyboardEventTypes.KEYDOWN && kbInfo.event.key === 'e' || kbInfo.event.key === 'E') {
-                if (this.mouseMoveListener) {
-                    this._canvas.removeEventListener("mousemove", this.mouseMoveListener);
-                    this.mouseMoveListener = null;
-                    if (this.examiningObject) {
-                        console.log("examining object naeme :", this.examiningObjectMesh.name);
-                        if (this.examiningObjectMesh.name === "IA_Lantern_primitive0") {
-                            this.examiningObjectMesh.setEnabled(false);
-                            this.swap(this._weapon, "lantern");
-                            this.firstChild = this._weapon;
-                            this.examiningObject = false;
-                            this._light.setEnabled(false);
-                            this.bougieLight.setEnabled(false);
-
-                            // Hide the examination HUD
-                            //document.getElementById("examination-hud").style.display = "none";
-
-                            this._canvas.focus();
-
-                            // Enable camera movement
-                            this.enableCameraMovement();
-                        }
-                        if (this.examiningObjectMesh.name === "IA_Flashlight_primitive0") {
-                            this.torcheOn = true;///à remplacer par la hache
-                            this.examiningObjectMesh.setEnabled(false);
-                            this.swap(this._weapon, "flashlight");
-                            this.firstChild = this._weapon;
-                            this.examiningObject = false;
-                            this.lanternLight.setEnabled(false);
-                            this.bougieLight.setEnabled(false);
-
-                            // Hide the examination HUD
-                            //document.getElementById("examination-hud").style.display = "none";
-
-                            this._canvas.focus();
-
-                            // Enable camera movement
-                            this.enableCameraMovement();
-                        }
-                        if (this.examiningObjectMesh.name === "Hands_Gun") {
-                            this.torcheOn = true;///à remplacer par la hache
-                            this.examiningObjectMesh.setEnabled(false);
-                            this.swap(this._weapon, "pistol");
-                            this.firstChild = this._weapon;
-                            this.examiningObject = false;
-                            this.lanternLight.setEnabled(false);
-                            this.bougieLight.setEnabled(false);
-
-                            // Hide the examination HUD
-                            //document.getElementById("examination-hud").style.display = "none";
-
-                            this._canvas.focus();
-
-                            // Enable camera movement
-                            this.enableCameraMovement();
-                        }
-                        if (this.examiningObjectMesh.name === "I_Key03") {
-                            this.examiningObjectMesh.setEnabled(false);
-                            this.examiningObject = false;
-                            this.firstChild = this._weapon;
-                            this.firstChild.setEnabled(true);
-                            this._canvas.focus();
-                            this.enableCameraMovement();
-                            this.canOpenDoor2 = true;
-                            this._keySound.play();
-                        }
-                        else {
-                            if (this.examiningObjectMesh.name === "Radio") {
-                                this._radioSound.stop();
+                if(interactionEnabled)
+                {
+                    if (this.mouseMoveListener) {
+                        this._canvas.removeEventListener("mousemove", this.mouseMoveListener);
+                        this.mouseMoveListener = null;
+                        if (this.examiningObject) {
+                            console.log("examining object name :", this.examiningObjectMesh.name);
+                            if (this.examiningObjectMesh.name === "IA_Lantern_primitive0") {
+                                this.examiningObjectMesh.setEnabled(false);
+                                this.swap(this._weapon, "lantern");
+                                this.firstChild = this._weapon;
+                                this.examiningObject = false;
+                                this._light.setEnabled(false);
+                                this.bougieLight.setEnabled(false);
+    
+                                // Hide the examination HUD
+                                //document.getElementById("examination-hud").style.display = "none";
+    
+                                this._canvas.focus();
+    
+                                // Enable camera movement
+                                this.enableCameraMovement();
                             }
-                            // If already examining an object, put it back to its initial position and rotation
-                            this.examiningObjectMesh.parent = this._scene.getTransformNodeByName(this.lastParentName);
-                            this.examiningObjectMesh.position = this.initialPosition;
-                            this.examiningObjectMesh.rotation = this.initialRotation;
-                            this.examiningObject = false;
-
-                            this.firstChild.setEnabled(true);
-
-                            // Hide the examination HUD
-                            //document.getElementById("examination-hud").style.display = "none";
-
-                            this._canvas.focus();
-
-                            // Enable camera movement
-                            this.enableCameraMovement();
+                            if (this.examiningObjectMesh.name === "IA_Flashlight_primitive0") {
+                                this.examiningObjectMesh.setEnabled(false);
+                                this.swap(this._weapon, "flashlight");
+                                this.firstChild = this._weapon;
+                                this.examiningObject = false;
+                                this.lanternLight.setEnabled(false);
+                                this.bougieLight.setEnabled(false);
+    
+                                // Hide the examination HUD
+                                //document.getElementById("examination-hud").style.display = "none";
+    
+                                this._canvas.focus();
+    
+                                // Enable camera movement
+                                this.enableCameraMovement();
+                            }
+                            if (this.examiningObjectMesh.name === "IA_Axe") {
+                                this.examiningObjectMesh.setEnabled(false);
+                                this.axeOn = true;///à remplacer par la hache        
+                                this._canvas.focus();
+                                this.enableCameraMovement();
+                            }
+                            if (this.examiningObjectMesh.name === "Hands_Gun") {
+                                this.examiningObjectMesh.setEnabled(false);
+                                this.swap(this._weapon, "pistol");
+                                this.firstChild = this._weapon;
+                                this.examiningObject = false;
+                                this.lanternLight.setEnabled(false);
+                                this.bougieLight.setEnabled(false);
+    
+                                // Hide the examination HUD
+                                //document.getElementById("examination-hud").style.display = "none";
+    
+                                this._canvas.focus();
+    
+                                // Enable camera movement
+                                this.enableCameraMovement();
+                            }
+                            if (this.examiningObjectMesh.name === "I_Key03") {
+                                this.examiningObjectMesh.setEnabled(false);
+                                this.examiningObject = false;
+                                this.firstChild = this._weapon;
+                                this.firstChild.setEnabled(true);
+                                this._canvas.focus();
+                                this.enableCameraMovement();
+                                this.canOpenDoor2 = true;
+                                this._keySound.play();
+                            }
+                            else {
+                                if (this.examiningObjectMesh.name === "Radio") {
+                                    this._radioSound.stop();
+                                }
+                                // If already examining an object, put it back to its initial position and rotation
+                                this.examiningObjectMesh.parent = this._scene.getTransformNodeByName(this.lastParentName);
+                                this.examiningObjectMesh.position = this.initialPosition;
+                                this.examiningObjectMesh.rotation = this.initialRotation;
+                                this.examiningObject = false;
+    
+                                this.firstChild.setEnabled(true);
+    
+                                // Hide the examination HUD
+                                //document.getElementById("examination-hud").style.display = "none";
+    
+                                this._canvas.focus();
+    
+                                // Enable camera movement
+                                this.enableCameraMovement();
+                            }
                         }
-                    }
-                } else {
-
-                    //distance of the ray
-                    const maxDistance = 5;
-
-                    // Calculate the forward direction from the camera
-                    const forward = this._camera.getForwardRay().direction;
-
-                    // Create a ray from the camera position in the forward direction
-                    const ray = new Ray(this._camera.position, forward, maxDistance);
-
-                    // Perform a raycast to check for intersections with objects in the scene
-                    const pickInfo = this._scene.pickWithRay(ray);
-
-                    // Check if an object was picked
-                    if (pickInfo.hit) {
-
-                        // Check if an object was picked and if it can be examined
-                        if (pickInfo && pickInfo.hit && this.canExamineObject(pickInfo.pickedMesh)) {
-                            const pickedObject = pickInfo.pickedMesh;
-                            this.examiningObjectMesh = pickedObject;
-                            this.initialPosition = pickedObject.position.clone();
-                            this.initialRotation = pickedObject.rotation.clone();
-                            this.lastParentName = pickedObject.parent.name;
-
-                            // Perform the desired interaction with the picked object
-                            this.examineObject(pickedObject);
-                            this.moveObject(pickedObject);
-
-                            // Show the examination HUD
-                            //document.getElementById("examination-hud").style.display = "block";
-
-                            // Lock the pointer and hide the cursor
-                            this._canvas.requestPointerLock();
-                            this.examiningObject = true;
-
-                            // Disable camera movement
-                            this.disableCameraMovement();
-                        }
-
-                        if (pickInfo && pickInfo.hit && this.canExamineDrawer(pickInfo.pickedMesh)) {
-                            if (!pickInfo.pickedMesh.name.includes("ChestOfDrawers_mesh") && !pickInfo.pickedMesh.name.includes("ChestOfDrawers_mesh.001") && !pickInfo.pickedMesh.name.includes("ChestOfDrawers_mesh.002")) {
+                    } else {
+    
+                        //distance of the ray
+                        const maxDistance = 5;
+    
+                        // Calculate the forward direction from the camera
+                        const forward = this._camera.getForwardRay().direction;
+    
+                        // Create a ray from the camera position in the forward direction
+                        const ray = new Ray(this._camera.position, forward, maxDistance);
+    
+                        // Perform a raycast to check for intersections with objects in the scene
+                        const pickInfo = this._scene.pickWithRay(ray);
+    
+                        // Check if an object was picked
+                        if (pickInfo.hit) {
+                            console.log(pickInfo.pickedMesh);
+                            // Check if an object was picked and if it can be examined
+                            if (pickInfo && pickInfo.hit && this.canExamineObject(pickInfo.pickedMesh)) {
                                 const pickedObject = pickInfo.pickedMesh;
-                                console.log(pickedObject.name);
-                                if (this.isOpen) {
-                                    this.closeChestOfDrawers(pickedObject);
-                                    if (pickedObject.name === "Drawer1" && this.oilOpen) {
-                                        this.closeOil();
-                                        this.oilOpen = false;
+                                this.examiningObjectMesh = pickedObject;
+                                this.initialPosition = pickedObject.position.clone();
+                                this.initialRotation = pickedObject.rotation.clone();
+                                this.lastParentName = pickedObject.parent.name;
+    
+                                // Perform the desired interaction with the picked object
+                                this.examineObject(pickedObject);
+                                this.moveObject(pickedObject);
+    
+                                // Show the examination HUD
+                                //document.getElementById("examination-hud").style.display = "block";
+    
+                                // Lock the pointer and hide the cursor
+                                this._canvas.requestPointerLock();
+                                this.examiningObject = true;
+    
+                                // Disable camera movement
+                                this.disableCameraMovement();
+                            }
+    
+                            if (pickInfo && pickInfo.hit && this.canExamineDrawer(pickInfo.pickedMesh)) {
+                                if (!pickInfo.pickedMesh.name.includes("ChestOfDrawers_mesh") && !pickInfo.pickedMesh.name.includes("ChestOfDrawers_mesh.001") && !pickInfo.pickedMesh.name.includes("ChestOfDrawers_mesh.002")) {
+                                    const pickedObject = pickInfo.pickedMesh;
+                                    console.log(pickedObject.name);
+                                    if (this.isOpen) {
+                                        this.closeChestOfDrawers(pickedObject);
+                                        if (pickedObject.name === "Drawer1") {
+                                            if(this.oilOpen)
+                                            {
+                                                this.closeOil();
+                                                this.oilOpen = false;
+                                                this.isOpen = false;
+                                            }
+                                        }
+                                        if (pickedObject.name === "Drawer1.002") {
+                                            if(this.batteryFlashlightOpen)
+                                            {
+                                                this.closeBattery();
+                                                this.closeFlashlight();
+                                                this.batteryFlashlightOpen = false;
+                                                this.isOpen = false;
+                                            }
+                                            
+                                        }
+                                        else{
+                                            this.isOpen = false;
+                                        }
+                                        
+    
+                                    } else {
+                                        this.openChestOfDrawers(pickedObject);
+                                        if (pickedObject.name === "Drawer1") {
+                                            {
+                                                if(!this.oilOpen)
+                                                {
+                                                    this.openOil();
+                                                    this.oilOpen = true;
+                                                    this.isOpen = true;
+                                                }
+                                            }
+                                        }
+                                        if (pickedObject.name === "Drawer1.002") {
+                                            if(!this.batteryFlashlightOpen)
+                                            {
+                                                this.openBattery();
+                                                this.openFlashlight();
+                                                this.batteryFlashlightOpen = true;
+                                                this.isOpen=true;
+                                            }
+                                        }
+                                        else{
+                                            this.isOpen = true;
+                                        }
+                                        
                                     }
-                                    if (pickedObject.name === "Drawer1.002" && this.batteryFlashlightOpen) {
-                                        this.closeBattery();
-                                        this.closeFlashlight();
-                                        this.batteryFlashlightOpen = false;
-                                    }
-                                    this.isOpen = false;
-
-                                } else {
-                                    this.openChestOfDrawers(pickedObject);
-                                    if (pickedObject.name === "Drawer1" && !this.oilOpen) {
-                                        this.openOil();
-                                        this.oilOpen = true;
-                                    }
-                                    if (pickedObject.name === "Drawer1.002" && !this.batteryFlashlightOpen) {
-                                        this.openBattery();
-                                        this.openFlashlight();
-                                        this.batteryFlashlightOpen = true;
-                                    }
-                                    this.isOpen = true;
                                 }
                             }
+                            if (pickInfo && pickInfo.hit && this.canExamineDoor(pickInfo.pickedMesh)) {
+                                this.openDoor(pickInfo.pickedMesh);
+                            }
+                            if (pickInfo && pickInfo.hit && this.canExaminePlanks(pickInfo.pickedMesh) && this.axeOn) {
+                                pickInfo.pickedMesh.setEnabled(false);
+                                this._plankBreak.setVolume(0.2);
+                                this._plankBreak.play();
+                            }
                         }
-                        if (pickInfo && pickInfo.hit && this.canExamineDoor(pickInfo.pickedMesh)) {
-                            this.openDoor(pickInfo.pickedMesh);
-                        }
-                        if (pickInfo && pickInfo.hit && this.canExaminePlanks(pickInfo.pickedMesh) && this.torcheOn) {
-                            pickInfo.pickedMesh.setEnabled(false);
-                            this._plankBreak.setVolume(0.2);
-                            this._plankBreak.play();
-                        }
-                    }
+                }
+                interactionEnabled=false;
+                setTimeout(() => {
+                    interactionEnabled = true; // Réactiver les interactions après le délai
+                }, 500);
                 }
             }
         });
     }
+
+    public openDoorAtStart()
+    {
+        if(this.doorCpt2 ===0)
+        {
+            var door2 = this._scene.getMeshByName("DoorHouse.002");
+            var rotationQuaternion = door2.rotationQuaternion.clone();
+            var rotationEulerAngles = rotationQuaternion.toEulerAngles();
+            rotationEulerAngles = new Vector3(rotationEulerAngles.x, rotationEulerAngles.y, rotationEulerAngles.z - (Math.PI / 2));
+            door2.rotationQuaternion = Quaternion.FromEulerAngles(rotationEulerAngles.x, rotationEulerAngles.y, rotationEulerAngles.z);
+            this.doorCpt2++;
+        }
+    }
+
+    public async spawnGhost1()
+    {
+        const result = await SceneLoader.ImportMeshAsync("", "./models/", "ghost.glb", this._scene);
+        this.ghostMesh1 = result.meshes[0];
+        this.ghostMesh1.name = "ghost1";
+        this.ghostMesh1.parent = this._scene.getMeshByName("Wall5X_WindowHole_CLR_primitive0");
+        console.log(this.ghostMesh1.rotation.y);
+        result.meshes[0].position = new Vector3(-0.9, 2.5, -2);
+        result.meshes[0].rotation = new Vector3(0, 0.52, 1.57);
+        result.meshes[0].scaling = new Vector3(1, 1, -1);
+        console.log(this.ghostMesh1.rotation.y);
+        this.ghostScareAnimation1 = this._scene.getAnimationGroupByName("Weeper_DEMO.Cast02end");
+    }
+
+    public async spawnGhost2()
+    {
+        const result = await SceneLoader.ImportMeshAsync("", "./models/", "ghost.glb", this._scene);
+        this.ghostMesh2 = result.meshes[0];
+        this.ghostMesh2.name = "ghost2";
+        this.ghostMesh2.parent = this._scene.getMeshByName("Window.Down.002_primitive0");
+        result.meshes[0].position = new Vector3(3, 0, -0.9);
+        result.meshes[0].rotation = new Vector3(0, 1.57, 1.57);
+        result.meshes[0].scaling = new Vector3(1.1, 1.2, -1);
+        this.ghostTauntAnimation = this._scene.getAnimationGroupByName("Weeper_DEMO.Taunt");
+        this.ghostTurnRightAnimation = this._scene.getAnimationGroupByName("Weeper_DEMO.TurnRight");
+        this._scene.getAnimationGroupByName("Weeper_DEMO.Cast01").name = "Weeper_Cast";
+        this.ghostCastAnimation = this._scene.getAnimationGroupByName("Weeper_Cast");
+        this.ghostCast01Animation = this._scene.getAnimationGroupByName("Weeper_DEMO.Cast01");
+        
+        this.ghostCastAnimation.loopAnimation = false;
+        //this.ghostCast01Animation.stop();
+        this.ghostMesh2.setEnabled(false);
+        this.ghostCastAnimation.dispose();
+        this.ghostCast01Animation.dispose();
+    }
+
+    public spawnboxTrigger1()
+    {
+        this.boxMesh1 = MeshBuilder.CreateBox("triggerbox1");
+        this.boxMesh1.position.x = -2;
+        this.boxMesh1.position.y = 0;
+        this.boxMesh1.position.z = 1;
+        this.boxMesh1.scaling.x = 1;
+        this.boxMesh1.scaling.y = 4;
+        this.boxMesh1.scaling.z = 3;
+        this.boxMesh1.visibility = 0;
+        this.boxMesh1.parent = this._scene.getMeshByName("VictorianRug (2)");
+    }
+
+    public spawnboxTrigger2()
+    {
+        this.boxMesh2 = MeshBuilder.CreateBox("triggerbox2");
+        this.boxMesh2.visibility = 0;
+        this.boxMesh2.position.x = -6.4;
+        this.boxMesh2.position.y = 0;
+        this.boxMesh2.position.z = 1;
+        this.boxMesh2.scaling.x = 1;
+        this.boxMesh2.scaling.y = 5;
+        this.boxMesh2.scaling.z = 3;
+        this.boxMesh2.parent = this._scene.getMeshByName("Rug");
+    }
+
+
+    
+
 
     private isAnimating = false;
     private isOpen = false;
@@ -1160,35 +1375,7 @@ export class FPSController {
         const animationDuration = 20; // Durée de l'animation en millisecondes
         const initialX = pickedObject.position.x; // Position initiale de l'objet
         const targetX = 1; // Position finale de l'ouverture du tiroir
-
-        // Création de l'animation
-        const animation = new Animation(
-            'positionAnimation', // Nom de l'animation
-            'position.x', // Propriété à animer (position.x)
-            60, // Nombre de frames par seconde
-            Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
-            Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
-        );
-
-        // Création de la liste des frames de l'animation
-        const keys: IAnimationKey[] = [
-            { frame: 0, value: initialX }, // Frame initiale
-            { frame: animationDuration, value: targetX } // Frame finale
-        ];
-
-        // Ajout des frames à l'animation
-        animation.setKeys(keys);
-
-        // Attacher l'animation à l'objet
-        pickedObject.animations = [];
-        pickedObject.animations.push(animation);
-
-        // Lancer l'animation
-        this.isAnimating = true;
-        this._scene.beginAnimation(pickedObject, 0, animationDuration, false).onAnimationEnd = () => {
-            this.isAnimating = false;
-            this.isOpen = true;
-        };
+        this.animationPosition(pickedObject,initialX,targetX,animationDuration,true,false);
     }
 
     private closeChestOfDrawers(pickedObject: AbstractMesh) {
@@ -1199,38 +1386,9 @@ export class FPSController {
         const animationDuration = 20; // Durée de l'animation en millisecondes
         const initialX = pickedObject.position.x; // Position initiale de l'objet
         const targetX = 0.2; // Position finale de la fermeture du tiroir
-
-        // Création de l'animation
-        const animation = new Animation(
-            'positionAnimation', // Nom de l'animation
-            'position.x', // Propriété à animer (position.x)
-            60, // Nombre de frames par seconde
-            Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
-            Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
-        );
-
-        // Création de la liste des frames de l'animation
-        const keys: IAnimationKey[] = [
-            { frame: 0, value: initialX }, // Frame initiale
-            { frame: animationDuration, value: targetX } // Frame finale
-        ];
-
-        // Ajout des frames à l'animation
-        animation.setKeys(keys);
-
-        // Attacher l'animation à l'objet
-        pickedObject.animations = [];
-        pickedObject.animations.push(animation);
-
-        // Lancer l'animation
-        this.isAnimating = true;
-        this._scene.beginAnimation(pickedObject, 0, animationDuration, false).onAnimationEnd = () => {
-            this.isAnimating = false;
-            this.isOpen = false;
-        };
+        this.animationPosition(pickedObject,initialX,targetX,animationDuration,true,false);
     }
-
-
+    
 
     private mouseMoveListener: (event: MouseEvent) => void = null;
 
@@ -1244,7 +1402,6 @@ export class FPSController {
         object.position = new Vector3(0, 0, 0.5);
         object.scaling.z = Math.abs(object.scaling.z) * -1;
 
-        this.examiningObject = true;
         if (object.name === "Radio") {
             this._radioSound.play();
         }
@@ -1298,7 +1455,7 @@ export class FPSController {
 
     private canExamineObject(object: AbstractMesh): boolean {
         let parent = object.parent;
-
+        
         // Iterate through the parents up to three levels
         for (let i = 0; i < 2; i++) {
             if (!parent || !parent.name) {
@@ -1320,9 +1477,7 @@ export class FPSController {
     }
 
     private canExamineDrawer(object: AbstractMesh): boolean {
-        console.log(object.name);
         let parent = object.parent;
-
         // Iterate through the parents up to three levels
         for (let i = 0; i < 2; i++) {
             if (!parent || !parent.name) {
@@ -1403,8 +1558,8 @@ export class FPSController {
             }
         }
         if (pickedObject.name === "OldDoor.001") {
-            if (initialEulerAngles.y < 1) {
-                if (this.canOpenDoor4) {
+            if (this.canOpenDoor4) {
+                if (initialEulerAngles.y < 1) {
                     targetEulerAngles = new Vector3(initialEulerAngles.x, initialEulerAngles.y + (Math.PI / 2), initialEulerAngles.z); // Ajouter 90 degrés
                     this._openDoorSound.play();
                 } else {
@@ -1445,11 +1600,12 @@ export class FPSController {
             this.isAnimating = false;
         };
     }
+    
 
     private canExamineDoor(object: AbstractMesh): boolean {
         let parent = object.parent;
 
-        // Iterate through the parents up to three levels
+        // Iterate through the parents up to two levels
         for (let i = 0; i < 2; i++) {
             if (!parent || !parent.name) {
                 // No more parents to check, exit the loop
@@ -1711,71 +1867,75 @@ export class FPSController {
     }
 
 
-    private openOil() {
-        const object = this._scene.getMeshByName("IC_OilBottle");
+    private openOil()
+    {
+        const object =  this._scene.getMeshByName("IC_OilBottle");
         const animationDuration = 20; // Durée de l'animation en millisecondes
-        const initialZ = object.position.z; // Position initiale de l'objet
-        const targetZ = initialZ + 0.5; // Position finale de l'ouverture du tiroir
-
-        this.animationPosition(object, initialZ, targetZ, animationDuration, false, false);
+        const initialZ = 200.746337890625; // Position initiale de l'objet
+        console.log(initialZ);
+        const targetZ = 201.246337890625; // Position finale de l'ouverture du tiroir
+        this.animationPosition(object,initialZ,targetZ,animationDuration,false,false);
     }
 
-    private closeOil() {
-        const object = this._scene.getMeshByName("IC_OilBottle");
+    private closeOil()
+    {
+        const object =  this._scene.getMeshByName("IC_OilBottle");
         const animationDuration = 20; // Durée de l'animation en millisecondes
-        const initialZ = object.position.z; // Position initiale de l'objet
-        const targetZ = initialZ - 0.5; // Position finale de l'ouverture du tiroir
+        const initialZ = 201.246337890625; // Position initiale de l'objet
+        console.log(initialZ);
+        const targetZ = 200.746337890625; // Position finale de l'ouverture du tiroir
 
-        this.animationPosition(object, initialZ, targetZ, animationDuration, false, false);
+        this.animationPosition(object,initialZ,targetZ,animationDuration,false,false);
     }
 
-    private openBattery() {
-        const object = this._scene.getMeshByName("IR_Battery01");
-        const object2 = this._scene.getMeshByName("IR_Battery01 (1)");
+    private openBattery()
+    {
+        const object =  this._scene.getMeshByName("IR_Battery01");
+        const object2 =  this._scene.getMeshByName("IR_Battery01 (1)");
         const animationDuration = 20; // Durée de l'animation en millisecondes
-        const initialX = object.position.x; // Position initiale de l'objet
-        const targetX = initialX + 0.5; // Position finale de l'ouverture du tiroir
+        const initialX = -44.3411504765749; // Position initiale de l'objet
+        const targetX = -43.8411504765749; // Position finale de l'ouverture du tiroir
 
-        this.animationPosition(object, initialX, targetX, animationDuration, true, false);
-        this.animationPosition(object2, initialX, targetX, animationDuration, true, false);
+        this.animationPosition(object,initialX,targetX,animationDuration,true,false);
+        this.animationPosition(object2,initialX,targetX,animationDuration,true,false);
     }
 
-    private closeBattery() {
-        const object = this._scene.getMeshByName("IR_Battery01");
-        const object2 = this._scene.getMeshByName("IR_Battery01 (1)");
+    private closeBattery()
+    {
+        const object =  this._scene.getMeshByName("IR_Battery01");
+        const object2 =  this._scene.getMeshByName("IR_Battery01 (1)");
         const animationDuration = 20; // Durée de l'animation en millisecondes
-        const initialX = object.position.x; // Position initiale de l'objet
-        const targetX = initialX - 0.5; // Position finale de l'ouverture du tiroir
+        const initialX = -43.8411504765749; // Position initiale de l'objet
+        const targetX = -44.3411504765749; // Position finale de l'ouverture du tiroir
 
-        this.animationPosition(object, initialX, targetX, animationDuration, true, false);
-        this.animationPosition(object2, initialX, targetX, animationDuration, true, false);
+        this.animationPosition(object,initialX,targetX,animationDuration,true,false);
+        this.animationPosition(object2,initialX,targetX,animationDuration,true,false);
+    }
+    
+
+    private openFlashlight()
+    {
+        const object =  this._scene.getMeshByName("IA_Flashlight_primitive0");
+        const object2 =  this._scene.getMeshByName("IA_Flashlight_primitive1");
+        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const initialPosition = 0;
+        const targetPosition =0.20;
+
+        this.animationPosition(object,initialPosition,targetPosition,animationDuration,true,false);
+        this.animationPosition(object2,initialPosition,targetPosition,animationDuration,true,false);
     }
 
-
-    private openFlashlight() {
-        const object = this._scene.getMeshByName("IA_Flashlight_primitive0");
-        const object2 = this._scene.getMeshByName("IA_Flashlight_primitive1");
+    private closeFlashlight()
+    {
+        const object =  this._scene.getMeshByName("IA_Flashlight_primitive0");
+        const object2 =  this._scene.getMeshByName("IA_Flashlight_primitive1");
         const animationDuration = 20; // Durée de l'animation en millisecondes
-        const initialX = object.position.x; // Position initiale de l'objet
-        const targetX = initialX + 0.20; // Position finale de l'ouverture du tiroir
-        const initialZ = object.position.z;
-        const targetZ = initialZ + 0.04;
 
-        this.animationPosition(object, initialX, targetX, animationDuration, true, false);
-        this.animationPosition(object2, initialX, targetX, animationDuration, true, false);
-    }
+        const initialPosition = 0.20;
+        const targetPosition = 0;
 
-    private closeFlashlight() {
-        const object = this._scene.getMeshByName("IA_Flashlight_primitive0");
-        const object2 = this._scene.getMeshByName("IA_Flashlight_primitive1");
-        const animationDuration = 20; // Durée de l'animation en millisecondes
-        const initialX = object.position.x; // Position initiale de l'objet
-        const targetX = initialX - 0.20; // Position finale de l'ouverture du tiroir
-        const initialZ = object.position.z;
-        const targetZ = initialZ - 0.04;
-
-        this.animationPosition(object, initialX, targetX, animationDuration, true, false);
-        this.animationPosition(object2, initialX, targetX, animationDuration, true, false);
+        this.animationPosition(object,initialPosition,targetPosition,animationDuration, true,false);
+        this.animationPosition(object2,initialPosition,targetPosition,animationDuration,true,false);
     }
 
     /**
@@ -1843,6 +2003,123 @@ export class FPSController {
         };
     }
 
+    private animationPositionGhost(pickedObject: AbstractMesh, initialPosition: number, targetPosition: number, animationDuration, x: boolean, y: boolean) {
+        var animation;
+        if (x) {
+            // Création de l'animation
+            animation = new Animation(
+                'positionAnimation', // Nom de l'animation
+                'position.x', // Propriété à animer (position.x)
+                60, // Nombre de frames par seconde
+                Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
+                Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+            );
+        }
+        else if (y) {
+            // Création de l'animation
+            animation = new Animation(
+                'positionAnimation', // Nom de l'animation
+                'position.y', // Propriété à animer (position.y)
+                60, // Nombre de frames par seconde
+                Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
+                Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+            );
+        }
+        else {
+            // Création de l'animation
+            animation = new Animation(
+                'positionAnimation', // Nom de l'animation
+                'position.z', // Propriété à animer (position.z)
+                60, // Nombre de frames par seconde
+                Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
+                Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+            );
+        }
+
+
+
+        // Création de la liste des frames de l'animation
+        const keys: IAnimationKey[] = [
+            { frame: 0, value: initialPosition }, // Frame initiale
+            { frame: animationDuration, value: targetPosition } // Frame finale
+        ];
+
+        // Ajout des frames à l'animation
+        animation.setKeys(keys);
+
+        // Attacher l'animation à l'objet
+        pickedObject.animations = [];
+        pickedObject.animations.push(animation);
+
+        // Lancer l'animation
+        this.isAnimating = true;
+        this._scene.beginAnimation(pickedObject, 0, animationDuration, false).onAnimationEnd = () => {
+            this.isAnimating = false;
+            pickedObject.setEnabled(false);
+            this._heartbeatSound.play();
+            this.enableCameraMovement();
+        };
+    }
+
+    private animationPositionGhost2(pickedObject: AbstractMesh, initialPosition: number, targetPosition: number, animationDuration, x: boolean, y: boolean) {
+        var animation;
+        if (x) {
+            // Création de l'animation
+            animation = new Animation(
+                'positionAnimation', // Nom de l'animation
+                'position.x', // Propriété à animer (position.x)
+                60, // Nombre de frames par seconde
+                Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
+                Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+            );
+        }
+        else if (y) {
+            // Création de l'animation
+            animation = new Animation(
+                'positionAnimation', // Nom de l'animation
+                'position.y', // Propriété à animer (position.y)
+                60, // Nombre de frames par seconde
+                Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
+                Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+            );
+        }
+        else {
+            // Création de l'animation
+            animation = new Animation(
+                'positionAnimation', // Nom de l'animation
+                'position.z', // Propriété à animer (position.z)
+                60, // Nombre de frames par seconde
+                Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
+                Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+            );
+        }
+
+
+
+        // Création de la liste des frames de l'animation
+        const keys: IAnimationKey[] = [
+            { frame: 0, value: initialPosition }, // Frame initiale
+            { frame: animationDuration, value: targetPosition } // Frame finale
+        ];
+
+        // Ajout des frames à l'animation
+        animation.setKeys(keys);
+
+        // Attacher l'animation à l'objet
+        pickedObject.animations = [];
+        pickedObject.animations.push(animation);
+
+        // Lancer l'animation
+        this.isAnimating = true;
+        this._scene.beginAnimation(pickedObject, 0, animationDuration, false).onAnimationEnd = () => {
+            this.isAnimating = false;
+            pickedObject.setEnabled(false);
+            this._breathingShound.setVolume(3);
+            this._breathingShound.play();
+            this.enableCameraMovement();
+        };
+    }
+
     private canExaminePlanks(object: AbstractMesh): boolean {
         let parent = object.parent;
         for (let i = 0; i < 2; i++) {
@@ -1861,13 +2138,14 @@ export class FPSController {
         return false;
     }
 
-    private importWeapon() {
+    public importWeapon(scene: Scene) {
         SceneLoader.ImportMesh("", "./models/", "pistolonly.glb", this._scene, function (newMeshes) {
             // Le modèle a été chargé avec succès
             var importedMesh = newMeshes[0]; // Le modèle est généralement le premier élément dans le tableau newMeshes
-        
+            var parent = this.scene.getTransformNodeByName("InteractiveObjects");
             // Position du modèle
-            importedMesh.position = new Vector3(41.91, 2, 156.35); // Remplacez x, y, z par les coordonnées de la position souhaitée
+            importedMesh.position = new Vector3(41.91, 1, 156.35);
+            importedMesh.parent = parent;  // Remplacez x, y, z par les coordonnées de la position souhaitée
         
             // Vous pouvez également effectuer d'autres opérations sur le modèle ici
         

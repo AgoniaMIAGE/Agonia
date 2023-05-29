@@ -256,7 +256,7 @@ export class FPSController {
                     this.walkSpeed = 1;
                     this.runSpeed = 2.2;
                 }
-                if (!this.isFiring) {
+                if (!this.isFiring && !this.isReloading) {
 
                     if (!this.zPressed && !this.qPressed && !this.sPressed && !this.dPressed) {
                         this.changeState(CharacterState.Idle);
@@ -264,7 +264,7 @@ export class FPSController {
                     }
 
                     if (!this.shiftPressed) {
-                        if (this.zPressed || this.qPressed || this.sPressed || this.dPressed) {
+                        if (this.zPressed || this.qPressed || this.sPressed || this.dPressed && !this.isReloading) {
                             this.walk(this.walkSpeed);
                             this.walkSound();
                             this.changeState(CharacterState.Walk);
@@ -272,7 +272,7 @@ export class FPSController {
                     }
 
                     if (this.shiftPressed) {
-                        if (this.zPressed || this.qPressed || this.sPressed || this.dPressed) {
+                        if (this.zPressed || this.qPressed || this.sPressed || this.dPressed && !this.isReloading) {
                             this.walk(this.runSpeed);
                             this._walkSound.stop();
                             if (!this._runSound.isPlaying) {
@@ -637,14 +637,7 @@ export class FPSController {
                             this.shiftPressed = true;
                             break;
                         case 'r':
-                            if (this._currentAnim !== this._reload && !this.reloadPressed) {
-                                this.reloadPressed = true;
-                                this._reloadSound.play();
-                                if (this.reload) {
-                                    this.changeState(CharacterState.Reload);
-                                }
-
-                            }
+                            this.reload();
                             break;
                         case 'f':
                             console.log(this._weapon.getChildMeshes()[0]?.name);
@@ -667,10 +660,6 @@ export class FPSController {
                                     this.flashlight(true);
                                 }
                             }
-                            break;
-                        case '&':
-                            this.fire();
-                            this._cooldown_time = 0;
                             break;
                     }
                     break;
@@ -695,7 +684,6 @@ export class FPSController {
             }
         });
 
-        // Mouse events
         this._scene.onPointerObservable.add((pointerInfo) => {
             if (this.examiningObject) {
                 return; // Sortir de la fonction pour désactiver les interactions
@@ -706,12 +694,16 @@ export class FPSController {
                         if (this._cooldown_fire <= this._cooldown_time / 60) {
                             this.fire();
                             this._cooldown_time = 0;
-                            this.changeState(CharacterState.Fire);
+                            if (this.rightClickPressed) {
+                                this.changeState(CharacterState.AimShot); // Ajout de l'animation de tir en visée
+                            } else {
+                                this.changeState(CharacterState.Fire); // Ajout de l'animation de tir
+                            }
                         }
                     } else if (pointerInfo.event.button === 2) {
                         this.rightClickPressed = !this.rightClickPressed;
                         if (this.rightClickPressed) {
-                            this.changeState(CharacterState.AimIdle);
+                            this.changeState(CharacterState.AimIdle); // Ajout de l'animation de visée
                         } else {
                             this.changeState(CharacterState.Idle);
                         }
@@ -721,6 +713,7 @@ export class FPSController {
             }
         });
     }
+
 
     private async reloadAmmo(): Promise<void> {
         await Tools.DelayAsync(1000);
@@ -881,9 +874,41 @@ export class FPSController {
 
 
 
-    private reload() {
-        this._empty_ammo.play();
+    private isReloading: boolean = false;
+
+
+    private reload(): void {
+        // If we're already reloading, we do nothing
+        if (this.isReloading) {
+            return;
+        }
+    
+        // We indicate that we're currently reloading
+        this.isReloading = true;
+        console.log("is reloading", this.isReloading);
+    
+        // We start the reload animation
+        this.changeState(CharacterState.Reload);
+        console.log("reload");
+    
+        // Add an observer for the end of the animation.
+        this._reload.onAnimationEndObservable.addOnce(() => {
+            // This code will run once the reload animation has finished
+            console.log("reload finished");
+            this.isReloading = false;
+        });
     }
+    
+
+    private playAnimation(animation) {
+        if (this.isReloading) {
+            return;
+        }
+        console.log(animation);
+
+        animation.play();
+    }
+
 
     private async createAllWeapons(): Promise<any> {
         await this.createWeapon1();
@@ -1071,12 +1096,14 @@ export class FPSController {
         this._aim_idle = this._scene.getAnimationGroupByName("Hands_Automatic_rifle03.Aim_Idle");
         this._aim_shot = this._scene.getAnimationGroupByName("Hands_Automatic_rifle03.Aim_Shot");
         this._aim_walk = this._scene.getAnimationGroupByName("Hands_Automatic_rifle03.Aim_Walk");
+        this._reload = this._scene.getAnimationGroupByName("Hands_Automatic_rifle03.Reload");
         this._run.loopAnimation = true;
         this._idle.loopAnimation = true;
         this._walk.loopAnimation = true;
         this._start.loopAnimation = false;
         this._fire.loopAnimation = false;
         this._end.loopAnimation = false;
+        this._reload.loopAnimation = false;
 
         //audio effect 
         this._weaponSound = new Sound("attack", "sounds/whoosh.mp3", this._scene);
@@ -1085,7 +1112,6 @@ export class FPSController {
     //Pistol and its variables/stats
     private async createPistol(): Promise<any> {
 
-        this.isMeleeWeapon = false;
         this.canFire = true;
 
         // Désactiver toutes les armes
@@ -1104,15 +1130,18 @@ export class FPSController {
         this._run = this._scene.getAnimationGroupByName("Hands_Gun.Run");
         this._start = this._scene.getAnimationGroupByName("Hands_Gun.Get");
         this._walk = this._scene.getAnimationGroupByName("Hands_Gun.Walk");
-        this._aim_idle = this._scene.getAnimationGroupByName("Hands_Gun.Aim_Idle");
-        this._aim_shot = this._scene.getAnimationGroupByName("Hands_Gun.Aim_Shot");
-        this._aim_walk = this._scene.getAnimationGroupByName("Hands_Gun.Aim_Walk");
+        this._aim_idle = this._scene.getAnimationGroupByName("Hands_Gun.Aiming_Idle");
+        this._aim_shot = this._scene.getAnimationGroupByName("Hands_Gun.Aiming_Shot");
+        this._aim_walk = this._scene.getAnimationGroupByName("Hands_Gun.Aiming_Walk");
+        this._reload = this._scene.getAnimationGroupByName("Hands_Gun.Recharge");
+        this._aim_idle.loopAnimation = false;
         this._run.loopAnimation = true;
         this._idle.loopAnimation = true;
         this._walk.loopAnimation = true;
         this._start.loopAnimation = false;
         this._fire.loopAnimation = false;
         this._end.loopAnimation = false;
+        this._reload.loopAnimation = false;
 
         //audio effect 
         this._weaponSound = new Sound("attack", "sounds/whoosh.mp3", this._scene);
@@ -1259,76 +1288,77 @@ export class FPSController {
         if (newState !== currentState) {
             switch (currentState) {
                 case CharacterState.End:
-                    this._end.stop();
+                    this._end?.stop();
                     break;
                 case CharacterState.Fire:
-                    this._fire.stop();
+                    this._fire?.stop();
                     break;
                 case CharacterState.Idle:
-                    this._idle.stop();
+                    this._idle?.stop();
                     break;
                 case CharacterState.Reload:
-                    this._reload.stop();
+                    this._reload?.stop();
                     break;
                 case CharacterState.Run:
-                    this._run.stop();
+                    this._run?.stop();
                     break;
                 case CharacterState.Start:
-                    this._start.stop();
+                    this._start?.stop();
                     break;
                 case CharacterState.Walk:
-                    this._walk.stop();
+                    this._walk?.stop();
                     break;
                 case CharacterState.AimWalk:
-                    this._aim_walk.stop();
+                    this._aim_walk?.stop();
                     break;
                 case CharacterState.AimShot:
-                    this._aim_shot.stop();
+                    this._aim_shot?.stop();
                     break;
                 case CharacterState.AimIdle:
-                    this._aim_idle.stop();
+                    this._aim_idle?.stop();
                     break;
             }
         }
-
+    
         // Start the new animation
         switch (newState) {
             case CharacterState.End:
-                this._end.play();
+                this.playAnimation(this._end);
                 break;
             case CharacterState.Fire:
-                this._fire.play();
+                this.playAnimation(this._fire);
                 break;
             case CharacterState.Idle:
-                this._idle.play(this._idle.loopAnimation);
+                this.playAnimation(this._idle);
                 break;
             case CharacterState.Reload:
-                this._reload.play();
+                this._reload.play();  // this should trigger the reloading logic
                 break;
             case CharacterState.Run:
-                this._run.play();
+                this.playAnimation(this._run);
                 break;
             case CharacterState.Start:
-                this._start.play();
+                this.playAnimation(this._start);
                 break;
             case CharacterState.Walk:
-                this._walk.play();
+                this.playAnimation(this._walk);
                 break;
             case CharacterState.AimWalk:
-                this._aim_walk.play();
+                this.playAnimation(this._aim_walk);
                 break;
             case CharacterState.AimShot:
-                this._aim_shot.play();
+                this.playAnimation(this._aim_shot);
                 break;
             case CharacterState.AimIdle:
-                this._aim_idle.play();
+                this.playAnimation(this._aim_idle);
                 break;
         }
-
+    
         // Update the current state
         currentState = newState;
     }
-
+    
+    
     private initialPosition: Vector3 = null;
     private lastParentName: string = null;
     // Add these properties to your class

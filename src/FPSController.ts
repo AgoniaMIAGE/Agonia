@@ -101,6 +101,7 @@ export class FPSController {
     private _aim_walk: AnimationGroup;
     private _aim_shot: AnimationGroup;
     private _aim_idle: AnimationGroup;
+    private _heal: AnimationGroup
 
     //Keys
     private zPressed: boolean = false;
@@ -292,7 +293,7 @@ export class FPSController {
                     }
                 }
                 if (this._camera.position.x >= 20.2) {
-                    if (this.doorCpt === 0 && !this.canOpenDoor2) {
+                    if (this.doorCpt === 1 && !this.canOpenDoor2) {
                         const object = this._scene.getMeshByName("DoorHouse.002")
                         const animationDuration = 10; // Durée de l'animation en millisecondes
                         const initialRotationQuaternion = object.rotationQuaternion;
@@ -338,7 +339,7 @@ export class FPSController {
                 }
                 if (this.boxMesh1.intersectsPoint(this._camera.position))//trigger ghost1
                 {
-                    if (this.ghostCpt === 0) {
+                    if (this.ghostCpt === 1) {
                         if (this._camera.target.z > 188.40) {
                             this._camera.rotation.y = -1.7452;
                             this._camera.rotation.x = -0.087;
@@ -365,7 +366,7 @@ export class FPSController {
                 }
                 if (this.boxMesh2.intersectsPoint(this._camera.position))//trigger ghost 2
                 {
-                    if (this.ghostCpt2 === 0) {
+                    if (this.ghostCpt2 === 1) {
                         this._camera.target.x = 26.767;
                         this._camera.target.y = 2.039;
                         this._camera.target.z = 187;
@@ -413,7 +414,7 @@ export class FPSController {
                 {
                     this.ghostMesh1.setEnabled(true);
                 }
-                if (this.planksCpt < 1) {
+                if (this.planksCpt < -1) {
                     if (this.ghostCpt3 === 0) {
                         this.ghostMesh1.setEnabled(true);
                         this._horrorSound.play();
@@ -520,7 +521,7 @@ export class FPSController {
      * create the camera which represents the player (FPS)
      */
     private createController(): void {
-        this._camera = new FreeCamera("camera", new Vector3(3.44, 2.5, 202.65), this._scene);
+        this._camera = new FreeCamera("camera", new Vector3(41.836, 2.1, 158.220), this._scene);
         this._camera.rotation.x = 0;
         this._camera.rotation.y = -4.72;
         this._camera.attachControl(this._canvas, true);
@@ -604,6 +605,9 @@ export class FPSController {
             case "pistol":
                 this.createPistol();
                 break;
+            case "ar15":
+                this.createRifle();
+                break;
         }
     }
 
@@ -636,7 +640,10 @@ export class FPSController {
                             if (this._currentAnim !== this._reload && !this.reloadPressed) {
                                 this.reloadPressed = true;
                                 this._reloadSound.play();
-                                this.changeState(CharacterState.Reload);
+                                if (this.reload) {
+                                    this.changeState(CharacterState.Reload);
+                                }
+
                             }
                             break;
                         case 'f':
@@ -661,12 +668,9 @@ export class FPSController {
                                 }
                             }
                             break;
-                            break;
                         case '&':
-                            if (this._cooldown_fire <= this._cooldown_time / 60) {
-                                this.fire();
-                                this._cooldown_time = 0;
-                            }
+                            this.fire();
+                            this._cooldown_time = 0;
                             break;
                     }
                     break;
@@ -821,8 +825,10 @@ export class FPSController {
 
     //left click to fire, right click to aim, ammo managed bellow too
     private fire() {
+        console.log("clique droit");
         if (this.canFire && !this.isMeleeWeapon) {
             if (this._cooldown_time / 60 >= this._cooldown_fire) {
+                console.log("fire");
                 var zombie = this._enemy;
                 var origin = this._camera.position;
                 if (FPSController._ammo > 0) {
@@ -841,9 +847,7 @@ export class FPSController {
                     var hit = this._scene.pickWithRay(ray);
 
                     // Set animation to "fire" if it's not already playing
-                    if (this._currentAnim !== this._fire) {
-                        this.changeState(CharacterState.Fire);
-                    }
+                    this.changeState(CharacterState.Fire);
 
                     for (let i = 0; i < this._zMeshes.length; i++) {
                         if (hit.pickedMesh.name == this._zMeshes[i]) {
@@ -886,6 +890,8 @@ export class FPSController {
         await this.createWeapon2();
         await this.createweapon3();
         await this.createweapon4();
+        await this.createweapon5();
+        await this.createweapon6();
 
         // Désactiver toutes les armes
         for (const weapon of this.allWeapons) {
@@ -980,6 +986,102 @@ export class FPSController {
         }
     }
 
+    private async createweapon5(): Promise<any> {
+        const result = await SceneLoader.ImportMeshAsync("", "./models/", "rifle.glb", this._scene);
+
+        let env = result.meshes[0];
+        let allMeshes = env.getChildMeshes();
+        env.parent = this._camera;
+        this.allWeapons.push(env);
+        result.meshes[0].position = new Vector3(0, -1.7, 0.2);
+        result.meshes[0].rotation = new Vector3(0, 0, 0);
+        result.meshes[0].scaling = new Vector3(1, 1, -1);
+
+
+        return {
+            mesh: env as Mesh,
+            animationGroups: result.animationGroups
+        }
+    }
+
+    private async createweapon6(): Promise<any> {
+        const result = await SceneLoader.ImportMeshAsync("", "./models/", "seringue.glb", this._scene);
+
+        let env = result.meshes[0];
+        let allMeshes = env.getChildMeshes();
+        env.parent = this._camera;
+        this.allWeapons.push(env);
+        result.meshes[0].position = new Vector3(0, -1.7, 0.2);
+        result.meshes[0].rotation = new Vector3(0, 0, 0);
+        result.meshes[0].scaling = new Vector3(1, 1, -1);
+
+
+        return {
+            mesh: env as Mesh,
+            animationGroups: result.animationGroups
+        }
+    }
+
+    //rifle and its variables/stats
+    private async createSeringue(): Promise<any> {
+
+        this.isMeleeWeapon = false;
+        this.canFire = false;
+
+        // Désactiver toutes les armes
+        for (const weapon of this.allWeapons) {
+            weapon.setEnabled(false);
+        }
+
+        // Activer la première arme (candle dans cet exemple)
+        this.allWeapons[4].setEnabled(true);
+        this._weapon = this.allWeapons[4];
+
+        //animations
+        this._heal = this._scene.getAnimationGroupByName("Hands_Syringe.First_Aid");
+        this._heal.loopAnimation = false;
+
+
+        //audio effect 
+        this._weaponSound = new Sound("attack", "sounds/whoosh.mp3", this._scene);
+    }
+
+    //rifle and its variables/stats
+    private async createRifle(): Promise<any> {
+
+        this.isMeleeWeapon = false;
+        this.canFire = true;
+
+        // Désactiver toutes les armes
+        for (const weapon of this.allWeapons) {
+            weapon.setEnabled(false);
+        }
+
+        // Activer la première arme (candle dans cet exemple)
+        this.allWeapons[4].setEnabled(true);
+        this._weapon = this.allWeapons[4];
+
+        //animations
+        this._end = this._scene.getAnimationGroupByName("Hands_Automatic_rifle03.Hide");
+        this._fire = this._scene.getAnimationGroupByName("Hands_Automatic_rifle03.Shott");
+        this._idle = this._scene.getAnimationGroupByName("Hands_Automatic_rifle03.Idle");
+        this._run = this._scene.getAnimationGroupByName("Hands_Automatic_rifle03.Run");
+        this._start = this._scene.getAnimationGroupByName("Hands_Automatic_rifle03.Get");
+        this._walk = this._scene.getAnimationGroupByName("Hands_Automatic_rifle03.Walk");
+        this._aim_idle = this._scene.getAnimationGroupByName("Hands_Automatic_rifle03.Aim_Idle");
+        this._aim_shot = this._scene.getAnimationGroupByName("Hands_Automatic_rifle03.Aim_Shot");
+        this._aim_walk = this._scene.getAnimationGroupByName("Hands_Automatic_rifle03.Aim_Walk");
+        this._run.loopAnimation = true;
+        this._idle.loopAnimation = true;
+        this._walk.loopAnimation = true;
+        this._start.loopAnimation = false;
+        this._fire.loopAnimation = false;
+        this._end.loopAnimation = false;
+
+        //audio effect 
+        this._weaponSound = new Sound("attack", "sounds/whoosh.mp3", this._scene);
+    }
+
     //Pistol and its variables/stats
     private async createPistol(): Promise<any> {
 
@@ -992,8 +1094,8 @@ export class FPSController {
         }
 
         // Activer la première arme (candle dans cet exemple)
-        this.allWeapons[1].setEnabled(true);
-        this._weapon = this.allWeapons[1];
+        this.allWeapons[3].setEnabled(true);
+        this._weapon = this.allWeapons[3];
 
         //animations
         this._end = this._scene.getAnimationGroupByName("Hands_Gun.Hide");
@@ -1002,6 +1104,9 @@ export class FPSController {
         this._run = this._scene.getAnimationGroupByName("Hands_Gun.Run");
         this._start = this._scene.getAnimationGroupByName("Hands_Gun.Get");
         this._walk = this._scene.getAnimationGroupByName("Hands_Gun.Walk");
+        this._aim_idle = this._scene.getAnimationGroupByName("Hands_Gun.Aim_Idle");
+        this._aim_shot = this._scene.getAnimationGroupByName("Hands_Gun.Aim_Shot");
+        this._aim_walk = this._scene.getAnimationGroupByName("Hands_Gun.Aim_Walk");
         this._run.loopAnimation = true;
         this._idle.loopAnimation = true;
         this._walk.loopAnimation = true;
@@ -1011,7 +1116,6 @@ export class FPSController {
 
         //audio effect 
         this._weaponSound = new Sound("attack", "sounds/whoosh.mp3", this._scene);
-
     }
 
 
@@ -1437,10 +1541,10 @@ export class FPSController {
                                 }
                             }
                             if (this.ar15names.includes(pickInfo.pickedMesh.name)) {
-                                console.log("ar15names");
+                                this.swap(this._weapon, "ar15");
                             }
                             if (this.pistoletnames.includes(pickInfo.pickedMesh.name)) {
-                                console.log("pistoletnames");
+                                this.swap(this._weapon, "pistol");
                             }
                         }
                     }
@@ -2362,19 +2466,19 @@ export class FPSController {
         var ar15_primitive2 = this._scene.getMeshByName("ar15_primitive2");
         var ar15_primitive3 = this._scene.getMeshByName("ar15_primitive3");
         var ar15_primitive4 = this._scene.getMeshByName("ar15_primitive4");
-        this.ar15names = ["ar15_primitive0", "ar15_primitive1", "ar15_primitive2","ar15_primitive3","ar15_primitive4"];
+        this.ar15names = ["ar15_primitive0", "ar15_primitive1", "ar15_primitive2", "ar15_primitive3", "ar15_primitive4"];
 
 
         // Stocker les meshes dans un tableau
-        this.ar15 = [ar15_primitive0, ar15_primitive1, ar15_primitive2,ar15_primitive3, ar15_primitive4];
+        this.ar15 = [ar15_primitive0, ar15_primitive1, ar15_primitive2, ar15_primitive3, ar15_primitive4];
 
-         // Obtenir les meshes
-         var pistolet_primitive0 = this._scene.getMeshByName("pistolet_primitive0");
-         var pistolet_primitive1 = this._scene.getMeshByName("pistolet_primitive1");
-         this.pistoletnames = ["pistolet_primitive0", "pistolet_primitive1"];
- 
-         // Stocker les meshes dans un tableau
-         this.pistolet = [pistolet_primitive0, pistolet_primitive1];
+        // Obtenir les meshes
+        var pistolet_primitive0 = this._scene.getMeshByName("pistolet_primitive0");
+        var pistolet_primitive1 = this._scene.getMeshByName("pistolet_primitive1");
+        this.pistoletnames = ["pistolet_primitive0", "pistolet_primitive1"];
+
+        // Stocker les meshes dans un tableau
+        this.pistolet = [pistolet_primitive0, pistolet_primitive1];
 
     }
 

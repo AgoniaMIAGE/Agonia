@@ -76,6 +76,7 @@ export class FPSController {
     private _breathingShound: Sound;
     private _horrorSound: Sound;
     private _secretPassage1: Sound;
+    private chestSound: Sound;
 
     //headLight
     private _light: SpotLight;
@@ -120,6 +121,10 @@ export class FPSController {
     private canOpenDoor4: boolean = true;
 
     //swap weapons
+    private handPistol: boolean = false;
+    private handRifle: boolean = false;
+    private inventory1: Boolean = false;
+    private inventory2: Boolean = false;
     private isMeleeWeapon: boolean = false;
     private canFire: boolean = false;
     private _candle: AbstractMesh;
@@ -233,6 +238,7 @@ export class FPSController {
         this._breathingShound = new Sound("breathing", "sounds/breathing.mp3", this._scene);
         this._horrorSound = new Sound("horrorsound", "sounds/horrorsound.mp3", this._scene);
         this._secretPassage1 = new Sound("secretpassage1", "sounds/secretpassage1.mp3", this._scene);
+        this.chestSound = new Sound("chest", "sounds/chest.mp3", this._scene);
     }
     /**
      * launched every 60ms 
@@ -531,7 +537,7 @@ export class FPSController {
      * create the camera which represents the player (FPS)
      */
     private createController(): void {
-        this._camera = new FreeCamera("camera", new Vector3(41.836, 2.1, 158.220), this._scene);
+        this._camera = new FreeCamera("camera", new Vector3(3.44, 2.5, 202.65), this._scene);
         this._camera.rotation.x = 0;
         this._camera.rotation.y = -4.72;
         this._camera.attachControl(this._canvas, true);
@@ -602,6 +608,8 @@ export class FPSController {
     // Weapon upgrades
     private swap(lastWeapon: AbstractMesh, i: string): void {
         lastWeapon.setEnabled(false);
+        this.handPistol = false;
+        this.handRifle = false;
         switch (i) {
             case "flashlight":
                 this.createFlashlight();
@@ -618,6 +626,8 @@ export class FPSController {
             case "ar15":
                 this.createRifle();
                 break;
+            case "seringue":
+                this.createSeringue();
         }
     }
 
@@ -649,6 +659,25 @@ export class FPSController {
                         case 'r':
                             this.reload();
                             break;
+                        case '&' || '1':
+                            if (this.inventory1) {
+                                this.swap(this._weapon, "pistol");
+                            }
+                            break;
+                        case 'é' || '2':
+                            if (this.inventory2) {
+                                this.swap(this._weapon, "ar15");
+                            }
+                            break;
+                        case '"' || '3':
+                            if (this.inventory2) {
+                                this.allWeapons.forEach((weapon) => {
+                                    weapon.setEnabled(false);
+                                });
+                                this.createSeringue();
+                            }
+
+                            break;
                         case 'f':
                             console.log(this._weapon.getChildMeshes()[0]?.name);
                             if (this._weapon.getChildMeshes()[0]?.name === "Flashlight2_Body") {
@@ -663,7 +692,7 @@ export class FPSController {
                                 } else {
                                     this.bougie(true);
                                 }
-                            } if (this._weapon.getChildMeshes()[0]?.name === "Arm_mesh001") {
+                            } if (this._weapon.getChildMeshes()[0]?.name === "Arm_mesh001" || this._weapon.getChildMeshes()[0]?.name === "Arm_mesh002" || this._weapon.getChildMeshes()[0]?.name === "Base_mesh") { 
                                 if (this._light.isEnabled()) {
                                     this.flashlight(false);
                                 } else {
@@ -1044,7 +1073,7 @@ export class FPSController {
         let allMeshes = env.getChildMeshes();
         env.parent = this._camera;
         this.allWeapons.push(env);
-        result.meshes[0].position = new Vector3(0, -1.7, 0.2);
+        result.meshes[0].position = new Vector3(0, -1.7, 0.12);
         result.meshes[0].rotation = new Vector3(0, 0, 0);
         result.meshes[0].scaling = new Vector3(1, 1, -1);
 
@@ -1093,7 +1122,20 @@ export class FPSController {
 
     //rifle and its variables/stats
     private async createSeringue(): Promise<any> {
-
+        var lastWeapon = null;
+        if(this.handPistol)
+        {
+            lastWeapon = "pistol";
+        }
+        else if(this.handRifle){
+            lastWeapon = "ar15";
+        }
+        else{
+            lastWeapon = "pistol";
+        }
+        console.log(lastWeapon);
+        console.log(this.handPistol);
+        console.log(this.handRifle);
         this.isMeleeWeapon = false;
         this.canFire = false;
 
@@ -1103,21 +1145,30 @@ export class FPSController {
         }
 
         // Activer la première arme (candle dans cet exemple)
-        this.allWeapons[4].setEnabled(true);
-        this._weapon = this.allWeapons[4];
+        this.allWeapons[5].setEnabled(true);
+        this._weapon = this.allWeapons[5];
 
         //animations
         this._heal = this._scene.getAnimationGroupByName("Hands_Syringe.First_Aid");
         this._heal.loopAnimation = false;
-
-
+        this._heal.play();
         //audio effect 
         this._weaponSound = new Sound("attack", "sounds/whoosh.mp3", this._scene);
+        this._weaponSound.play();
+
+        this._heal.onAnimationGroupEndObservable.add(() => {
+            this.swap(this._weapon, lastWeapon);    
+        });
+
     }
 
     //rifle and its variables/stats
     private async createRifle(): Promise<any> {
-
+        if (!this.inventory2) {
+            this.inventory2 = true;
+        }
+        this.handRifle = true;
+        this.isNight = true;
         this.isMeleeWeapon = false;
         this.canFire = true;
 
@@ -1155,6 +1206,11 @@ export class FPSController {
 
     //Pistol and its variables/stats
     private async createPistol(): Promise<any> {
+        if (!this.inventory1) {
+            this.inventory1 = true;
+        }
+        this.handPistol = true;
+
         this.isNight = true;
         this.canFire = true;
 
@@ -1617,9 +1673,14 @@ export class FPSController {
                             }
                             if (this.ar15names.includes(pickInfo.pickedMesh.name)) {
                                 this.swap(this._weapon, "ar15");
+                                pickInfo.pickedMesh.setEnabled(false);
+                                const ar15Node = this._scene.getTransformNodeByName("ar15");
+                                ar15Node.setEnabled(false);
                             }
                             if (this.pistoletnames.includes(pickInfo.pickedMesh.name)) {
                                 this.swap(this._weapon, "pistol");
+                                const pistolNode = this._scene.getTransformNodeByName("pistolet");
+                                pistolNode.setEnabled(false);
                             }
                         }
                     }
@@ -1716,25 +1777,29 @@ export class FPSController {
     private batteryFlashlightOpen = false;
 
     private openChestOfDrawers(pickedObject: AbstractMesh) {
+
         if (this.isAnimating) {
             return; // Si une animation est déjà en cours, ne commencez pas une nouvelle animation
         }
 
-        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const animationDuration = 40; // Durée de l'animation en millisecondes
         const initialX = pickedObject.position.x; // Position initiale de l'objet
         const targetX = 1; // Position finale de l'ouverture du tiroir
         this.animationPosition(pickedObject, initialX, targetX, animationDuration, true, false);
+        this.chestSound.play();
     }
 
     private closeChestOfDrawers(pickedObject: AbstractMesh) {
+
         if (this.isAnimating) {
             return; // Si une animation est déjà en cours, ne commencez pas une nouvelle animation
         }
 
-        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const animationDuration = 40; // Durée de l'animation en millisecondes
         const initialX = pickedObject.position.x; // Position initiale de l'objet
         const targetX = 0.2; // Position finale de la fermeture du tiroir
         this.animationPosition(pickedObject, initialX, targetX, animationDuration, true, false);
+        this.chestSound.play();
     }
 
 
@@ -1753,7 +1818,7 @@ export class FPSController {
         if (object.name === "Radio") {
             this._radioSound.play();
         }
-        if (object.name === "Paper_01" || object.name === "PaperBent_A") {
+        if (object.name === "Paper_01.001" || object.name === "PaperBent_A" || object.name === "Paper_02" || object.name === "Paper_03" || object.name === "Paper_04") {
             this._paperSound.play();
         }
         if (object.name === "IC_PetrolOilBottle") {
@@ -1765,7 +1830,7 @@ export class FPSController {
         if (object.name === "Telephone01") {
             this._phoneSound.play();
         }
-        if (object.name === "IH_Apple" || object.name === "IH_Banana") {
+        if (object.name === "IH_Apple") {
             this._appleSound.play();
         }
         if (object.name === "IA_Axe") {

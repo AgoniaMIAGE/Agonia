@@ -108,58 +108,33 @@ export class Enemy {
     public async CreateEnemy(position: Vector3): Promise<any> {
 
     }
-    private changeState(newState: EnemyState) {
-        // Stop the current animation
-        if (newState !== this.currentState) {
-          this.stopCurrentAnimation();
+
+    private updateState(newState: EnemyState) {
+        if (this.currentState !== newState) {
+            // Stop the current animation
+            this.getCurrentAnimation().stop();
+
+            // Update the current state
+            this.currentState = newState;
+
+            // Play the new animation
+            this.getCurrentAnimation().play;
         }
-      
-        // Start the new animation
-        this.currentState = newState;
-        switch (newState) {
-          case EnemyState.Idle:
-            this.playAnimation(this._idle);
-            break;
-          case EnemyState.Walk:
-            this.playAnimation(this._walk);
-            break;
-          case EnemyState.Run:
-            this.playAnimation(this._run);
-            break;
-          case EnemyState.Attack:
-            this.playAnimation(this._attack);
-            break;
-          case EnemyState.Hit:
-            this.playAnimation(this._hit);
-            break;
-          case EnemyState.Dead:
-            this.playAnimation(this._fallingBack);
-            break;
-          case EnemyState.Scream:
-            this.playAnimation(this._scream);
-            break;
-          case EnemyState.Sleep:
-            this.playAnimation(this._sleep);
-            break;
-          default:
-            this.playAnimation(this._idle);
-            break;
+    }
+
+    private getCurrentAnimation(): AnimationGroup {
+        switch (this.currentState) {
+            case EnemyState.Idle: return this._idle;
+            case EnemyState.Walk: return this._walk;
+            case EnemyState.Run: return this._run;
+            case EnemyState.Attack: return this._attack;
+            case EnemyState.Hit: return this._hit;
+            case EnemyState.Dead: return this._fallingBack;
+            case EnemyState.Scream: return this._scream;
+            case EnemyState.Sleep: return this._sleep;
+            default: return this._idle;
         }
-      }
-      
-      private stopCurrentAnimation() {
-        if (this._currentAnim) {
-          this._currentAnim.stop();
-        }
-      }
-      
-      private playAnimation(animationGroup: AnimationGroup) {
-        if (animationGroup) {
-          this._currentAnim = animationGroup;
-          animationGroup.play();
-        }
-      }
-      
+    }
 
 
 
@@ -167,7 +142,7 @@ export class Enemy {
         this.zombieMeshes.setEnabled(true);
         this.zombieMeshes.position = (new Vector3(this.getRandomInt(200), 0, this.getRandomInt(200)));
         this.isDead = false;
-        this.changeState(EnemyState.Sleep);
+        this.updateState(EnemyState.Sleep);
         this.currentHealth = this.maxHealth;
     }
 
@@ -194,7 +169,7 @@ export class Enemy {
         var velocity2 = this.velocity;
 
         this.velocity = 0;
-        this.changeState(EnemyState.Hit);
+        this.updateState(EnemyState.Hit);
         this.currentHealth -= damage;
         if (this.currentHealth <= 0) {
             this.die();
@@ -209,7 +184,7 @@ export class Enemy {
     public async die() {
         if (!this.isDead) {
             this.isDead = true;
-            this.changeState(EnemyState.Dead);
+            this.updateState(EnemyState.Dead);
             await Tools.DelayAsync(3000);
             this.zombieMeshes.setEnabled(false);
             await Tools.DelayAsync(1000);
@@ -238,16 +213,16 @@ export class Enemy {
                 velocity = 0;
                 this.attack();
                 this.stunPlayer();
-                this.changeState(EnemyState.Attack);
+                this.updateState(EnemyState.Attack);
               }
               else if (velocity >= 0.8) {
-                this.changeState(EnemyState.Run);
+                this.updateState(EnemyState.Run);
               }
               else if (velocity == 0) {
-                this.changeState(EnemyState.Idle);
+                this.updateState(EnemyState.Idle);
               }
               else if (velocity >= 0.05 && velocity < 0.8) {
-                this.changeState(EnemyState.Walk);
+                this.updateState(EnemyState.Walk);
               }
             distVec -= velocity;
             zombie.translate(new Vector3(targetVecNorm._x, 0, targetVecNorm._z,), velocity, Space.WORLD);
@@ -262,7 +237,7 @@ export class Enemy {
     protected async stunPlayer() {
         Enemy.hitPlayer = true;
         await Tools.DelayAsync(4000);
-        this.changeState(EnemyState.Scream);
+        this.updateState(EnemyState.Scream);
         if (!this._isScreaming) {
             this._screamSound.play();
             this._isScreaming = true;
@@ -279,7 +254,7 @@ export class Enemy {
     protected attack() {
 
         if (!this.isDead && !this._attack.isPlaying)
-        this.changeState(EnemyState.Attack);
+        this.updateState(EnemyState.Attack);
         PlayerHealth._current_Health -= this.damage;
         this._hurtSound.play();
     }

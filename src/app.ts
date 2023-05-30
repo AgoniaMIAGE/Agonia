@@ -12,6 +12,8 @@ import { Boss } from "./Boss";
 import { Zombie } from "./Zombie";
 import { UtilityLayerRenderer, Engine, int, KeyboardEventTypes, Tools, ArcRotateCamera, OimoJSPlugin, SpotLight, HemisphericLight, Scene, Animation, Vector3, Mesh, Color3, Color4, ShadowGenerator, GlowLayer, PointLight, FreeCamera, CubeTexture, Sound, PostProcess, Effect, SceneLoader, Matrix, MeshBuilder, Quaternion, AssetsManager, StandardMaterial, PBRMaterial, Material, float, Light } from "@babylonjs/core";
 import { Round } from "./Round";
+//import { CustomLoadingUI } from "./CustomLoadingUi";
+
 
 enum State { START = 0, GAME = 1, LOSE = 2, CUTSCENE = 3 }
 
@@ -35,6 +37,10 @@ class App {
     private _currentRound: int = 1;
     private _isdead: boolean;
     private nighted: boolean = false;
+    //private customLoadingUI = new CustomLoadingUI();
+
+    private difficultyLevels: string[];  // Declare difficultyLevels property
+    private currentDifficultyIndex: number;
 
     //all weapons
     private _fps: FPSController;
@@ -99,107 +105,161 @@ class App {
         let camera = new FreeCamera("camera1", new Vector3(0, 0, 0), scene);
         camera.setTarget(Vector3.Zero());
 
-        //create a fullscreen ui for all of our GUI elements
+        // Create a fullscreen UI for all of our GUI elements
         const guiMenu = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-        guiMenu.idealHeight = 720; //fit our fullscreen ui to this height
+        guiMenu.idealHeight = 720; // Fit our fullscreen UI to this height
 
-        //background image
         const imageRect = new Rectangle("titleContainer");
-        imageRect.width = 0.8;
+        imageRect.width = 1;
         imageRect.thickness = 0;
         guiMenu.addControl(imageRect);
 
         const startbg = new Image("startbg", "/sprites/start.jpg");
         imageRect.addControl(startbg);
 
-        //statera title
-        const title = new TextBlock("title", "Statera");
+        const howToPlayImage = new Image("howToPlayImage", "/sprites/tuto.png");
+        howToPlayImage.width = 0.5;
+        howToPlayImage.height = 0.7;
+        imageRect.addControl(howToPlayImage);
+        howToPlayImage.isVisible = false; // Initiallement cachée
+
+
+        const titleContainer = new Rectangle("titleContainer");
+        titleContainer.width = 0.8;
+        titleContainer.thickness = 0;
+        titleContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        titleContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        imageRect.addControl(titleContainer);
+
+        const title = new TextBlock("title", "AGONIA");
         title.resizeToFit = true;
         title.fontFamily = "Ceviche One";
-        title.fontSize = "64px";
+        title.fontSize = "75px";
         title.color = "white";
         title.resizeToFit = true;
-        title.top = "14px";
+        title.top = "10px";
         title.width = 0.8;
         title.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
         title.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        imageRect.addControl(title);
+        titleContainer.addControl(title);  // Add the title to the container
 
-        //create a simple button
-        const startBtn = Button.CreateSimpleButton("start", "PLAY");
-        startBtn.width = 1;
-        startBtn.height = "150px";
-        startBtn.color = "white";
-        startBtn.top = "-14px";
-        startBtn.thickness = 0;
-        startBtn.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        guiMenu.addControl(startBtn);
+        const mainPanel = new StackPanel();
+        mainPanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        mainPanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        mainPanel.left = "150px"; // Increase the margin to the left
+        mainPanel.top = "-50px"; // Increase the margin to the top
+        mainPanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT; // Align the main panel to the left
+        guiMenu.addControl(mainPanel);
 
-        // difficulties - easy
-        const easy = new Image("easy", "/sprites/easy.png");
-        easy.width = "5%";
-        easy.stretch = Image.STRETCH_UNIFORM;
-        easy.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-        easy.left = -200;
-        easy.paddingBottomInPixels = 620;
-        guiMenu.addControl(easy);
-        easy.onPointerDownObservable.add(() => {
-            easy.width = "8%";
-            medium.width = "5%";
-            hard.width = "5%";
+        const startBtn = this.createTextButton("start", "Jouer");
+        mainPanel.addControl(startBtn);
+
+        this.difficultyLevels = ["Difficulté : facile", "Difficulté : Expérimenté", "Difficulté : ! TERREUR !"];  // Difficulty levels
+        this.currentDifficultyIndex = 0;  // Start with the first difficulty level
+
+        const difficultyBtn = this.createDifficultyButton("difficulty", this.difficultyLevels[this.currentDifficultyIndex]);
+        mainPanel.addControl(difficultyBtn);
+
+        const howToPlayBtn = this.createTextButton("howtoplay", "Comment jouer ?");
+        mainPanel.addControl(howToPlayBtn);
+
+        howToPlayBtn.onPointerDownObservable.add(() => {
+            if (howToPlayImage.isVisible == true)
+                howToPlayImage.isVisible = false;
+            else {
+                howToPlayImage.isVisible = true;
+            }
+        });
+
+        startBtn.onPointerDownObservable.add(() => {
+            this.goToGame();
+            scene.detachControl();
+        });
+
+        // Set difficulty based on currentDifficultyIndex
+        if (this.currentDifficultyIndex === 0) { // Easy difficulty
             this._difficulty = 400;
             this._velocity = 0.4;
             this._velocity2 = 0.5;
             this._velocity3 = 1;
-        });
-
-        //medium
-        const medium = new Image("medium", "/sprites/medium.png");
-        medium.width = "5%";
-        medium.stretch = Image.STRETCH_UNIFORM;
-        medium.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-        medium.left = -100;
-        medium.paddingBottomInPixels = 620;
-        guiMenu.addControl(medium);
-        medium.onPointerDownObservable.add(() => {
-            easy.width = "5%";
-            medium.width = "8%";
-            hard.width = "5%";
+        } else if (this.currentDifficultyIndex === 1) { // Experienced difficulty
             this._difficulty = 250;
             this._velocity = 0.7;
             this._velocity2 = 0.8;
             this._velocity3 = 1.3;
-        });
-
-        //hard
-        const hard = new Image("hard", "/sprites/hard.png");
-        hard.width = "5%";
-        hard.stretch = Image.STRETCH_UNIFORM;
-        hard.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-        hard.paddingBottomInPixels = 620;
-        guiMenu.addControl(hard);
-        hard.onPointerDownObservable.add(() => {
-            easy.width = "5%";
-            medium.width = "5%";
-            hard.width = "8%";
+        } else if (this.currentDifficultyIndex === 2) { // Terror difficulty
             this._difficulty = 100;
             this._velocity = 1.1;
             this._velocity2 = 1.2;
             this._velocity3 = 1.5;
-        });
+        }
 
-        //this handles interactions with the start button attached to the scene
-        startBtn.onPointerDownObservable.add(() => {
-            this.goToGame();
-            scene.detachControl(); //observables disabled
-        });
-        //--SCENE FINISHED LOADING--
         await scene.whenReadyAsync();
-        //lastly set the current state to the start state and set the scene to the start scene
+
+
         this._scene.dispose();
         this._scene = scene;
         this._state = State.GAME;
     }
+
+    private createTextButton(name: string, text: string) {
+        const btnContainer = new Rectangle();
+        btnContainer.width = "500px";
+        btnContainer.height = "75px";
+        btnContainer.cornerRadius = 0;
+        btnContainer.thickness = 0;
+        btnContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        btnContainer.paddingLeft = "0px"; // Add a left padding to create a margin
+        btnContainer.color = "transparent"; // Set the container color to transparent
+
+        const btnText = new TextBlock();
+        btnText.text = text;
+        btnText.color = "white";
+        btnText.fontSize = "25px";
+        btnText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT; // Align the text to the left
+        btnText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+        btnContainer.addControl(btnText);
+
+        return btnContainer;
+    }
+
+    private createDifficultyButton(name: string, text: string) {
+        const btnContainer = new Rectangle();
+        btnContainer.width = "550px";
+        btnContainer.height = "75px";
+        btnContainer.cornerRadius = 0;
+        btnContainer.thickness = 0;
+        btnContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        btnContainer.paddingLeft = "0px"; // Add a left padding to create a margin
+        btnContainer.color = "transparent"; // Set the container color to transparent
+
+        const btn = Button.CreateSimpleButton(name, "");
+        btn.width = "100%";
+        btn.height = "100%";
+        btn.color = "white";
+        btn.fontSize = "25px";
+        btn.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT; // Align the button to the left
+        btn.thickness = 0; // Remove the border by setting the thickness to 0
+
+        const btnText = new TextBlock();
+        btnText.text = text;
+        btnText.color = "white";
+        btnText.fontSize = "25px";
+        btnText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT; // Align the text to the left
+        btnText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+        btn.addControl(btnText);
+        btnContainer.addControl(btn);
+
+        btn.onPointerDownObservable.add(() => {
+            this.currentDifficultyIndex = (this.currentDifficultyIndex + 1) % this.difficultyLevels.length;
+            btnText.text = this.difficultyLevels[this.currentDifficultyIndex];
+        });
+
+        return btnContainer;
+    }
+
 
     /**
      * launched every 60ms 
@@ -212,7 +272,7 @@ class App {
                     this._state = State.LOSE;
                     this.goToLose();
                 }
-                if (this._fps.isNight && !this.nighted){
+                if (this._fps.isNight && !this.nighted) {
                     this.night();
                     console.log("night");
                 }
@@ -269,7 +329,6 @@ class App {
             allMeshes.checkCollisions = true;
         })
     }
-
     // the 3 enemies of each wave
     private createEnemies() {
         this._enemies =
@@ -294,8 +353,8 @@ class App {
     // launch the day and its functions, checks..
     public async day() {
         this.disableEnemies();
-        if(!this._isdead){
-            this._currentRound += 1;    
+        if (!this._isdead) {
+            this._currentRound += 1;
         }
         this._round.day();
         this._isdead = false;
@@ -345,10 +404,11 @@ class App {
         this._scene = this._gameScene;
         this._scene.detachControl();
         this._engine.displayLoadingUI();
-        this.createMap();
+        await this.createMap();
         await this._scene.whenReadyAsync();
-        this._engine.hideLoadingUI();
+
         //AFTER LOADING
+        this._engine.hideLoadingUI();
         this._scene.debugLayer.show();
         this._fps.diableCarpet();
         this._scene.attachControl();

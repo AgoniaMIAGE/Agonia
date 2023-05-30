@@ -38,11 +38,10 @@ export class FPSController {
     private _lastPost: Vector3;
     private _zMeshes: Array<String>;
     private _playerHealth: PlayerHealth;
+    public isNight: boolean = false;
 
     //weapons
     private _weapon: AbstractMesh;
-
-    //cooldown to shot
 
     public static _ammo: int = 30;
     public static _max_ammo: int = 30;
@@ -118,7 +117,7 @@ export class FPSController {
     private canOpenDoor1: boolean = true;
     private canOpenDoor2: boolean = false;
     private canOpenDoor3: boolean = false;
-    private canOpenDoor4: boolean = false;
+    private canOpenDoor4: boolean = true;
 
     //swap weapons
     private isMeleeWeapon: boolean = false;
@@ -794,7 +793,7 @@ export class FPSController {
      * zombie's meshes, used to know if the zombie is hit
      */
     private setupAllMeshes() {
-        this._zMeshes = ["skeletonZombie", "parasiteZombie", "Ch10_primitive0", "Ch10_primitive1"];
+        this._zMeshes = ["Monster_01_MEsh", "Monster_03_MEsh", "Monster_04_MEsh"];
     }
 
     /**
@@ -827,7 +826,6 @@ export class FPSController {
     //left click to fire, right click to aim, ammo managed bellow too
     private fire() {
         if (this.canFire && !this.isMeleeWeapon) {
-            console.log("fire");
             var zombie = this._enemy;
             var origin = this._camera.position;
             if (FPSController._ammo > 0) {
@@ -851,25 +849,26 @@ export class FPSController {
 
                     var hit = this._scene.pickWithRay(ray);
                     this.changeState(CharacterState.AimShot);
-                    this._aim_shot.onAnimationEndObservable.addOnce(() => {
-                        console.log("fire finished");
-                        this.isFiring = false;
-                    });
-
                     for (let i = 0; i < this._zMeshes.length; i++) {
+                        console.log(hit.pickedMesh.name);
                         if (hit.pickedMesh.name == this._zMeshes[i]) {
                             switch (this._zMeshes[i]) {
-                                case "skeletonZombie":
+                                case "Monster_01_MEsh":
                                     this._boss.getHit(this._damage);
                                     break;
-                                case "parasiteZombie":
+                                case "Monster_03_MEsh":
                                     this._mutant.getHit(this._damage);
                                     break;
-                                case "Ch10_primitive0" || "Ch10_primitive1":
+                                case "Monster_04_MEsh":
                                     this._zombie.getHit(this._damage);
                             }
                         }
                     }
+                    this._aim_shot.onAnimationEndObservable.addOnce(() => {
+                        this.isFiring = false;
+                    });
+
+
                 }
                 else {
                     this.isFiring = true;
@@ -888,29 +887,30 @@ export class FPSController {
                     var hit = this._scene.pickWithRay(ray);
 
                     this.changeState(CharacterState.Fire);
-                    console.log("fire");
-
-                    // Add an observer for the end of the animation.
-                    this._fire.onAnimationEndObservable.addOnce(() => {
-                        console.log("fire finished");
-                        this.isFiring = false;
-                    });
-                    // Set animation to "fire" if it's not already playing
 
                     for (let i = 0; i < this._zMeshes.length; i++) {
+                        console.log(hit.pickedMesh.name);
                         if (hit.pickedMesh.name == this._zMeshes[i]) {
                             switch (this._zMeshes[i]) {
-                                case "skeletonZombie":
+                                case "Monster_01_MEsh":
                                     this._boss.getHit(this._damage);
                                     break;
-                                case "parasiteZombie":
+                                case "Monster_03_MEsh":
                                     this._mutant.getHit(this._damage);
                                     break;
-                                case "Ch10_primitive0" || "Ch10_primitive1":
+                                case "Monster_04_MEsh":
                                     this._zombie.getHit(this._damage);
                             }
                         }
                     }
+
+                    // Add an observer for the end of the animation.
+                    this._fire.onAnimationEndObservable.addOnce(() => {
+                        this.isFiring = false;
+                    });
+                    // Set animation to "fire" if it's not already playing
+
+
                 }
             }
             else {
@@ -1150,12 +1150,12 @@ export class FPSController {
         this._reload.loopAnimation = false;
 
         //audio effect 
-        this._weaponSound = new Sound("attack", "sounds/whoosh.mp3", this._scene);
+        this._weaponSound = new Sound("attack", "sounds/riflesound.mp3", this._scene);
     }
 
     //Pistol and its variables/stats
     private async createPistol(): Promise<any> {
-
+        this.isNight = true;
         this.canFire = true;
 
         // Désactiver toutes les armes
@@ -1190,7 +1190,7 @@ export class FPSController {
         this._reload.loopAnimation = false;
 
         //audio effect 
-        this._weaponSound = new Sound("attack", "sounds/whoosh.mp3", this._scene);
+        this._weaponSound = new Sound("attack", "sounds/pistolsound.mp3", this._scene);
     }
 
 

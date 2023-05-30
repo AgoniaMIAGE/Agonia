@@ -34,6 +34,7 @@ class App {
     private _cooldown: int = 30000;
     private _currentRound: int = 1;
     private _isdead: boolean;
+    private nighted: boolean = false;
 
     //all weapons
     private _fps: FPSController;
@@ -208,8 +209,12 @@ class App {
             setInterval(() => {
                 if (PlayerHealth._current_Health <= 0) {
                     this._isdead = true;
-                    PlayerHealth._current_Health = 200;
-                    this.day();
+                    this._state = State.LOSE;
+                    this.goToLose();
+                }
+                if (this._fps.isNight && !this.nighted){
+                    this.night();
+                    console.log("night");
                 }
                 else {
                     clearInterval(1);
@@ -294,8 +299,6 @@ class App {
         }
         this._round.day();
         this._isdead = false;
-        await Tools.DelayAsync(2000000000000000000);
-        this.night();
     }
 
     // launch the night and its functions, implementations...
@@ -308,9 +311,7 @@ class App {
         this._mutant.changePosition();
         this._boss.changePosition();
         this.enableEnemies();
-        await Tools.DelayAsync(this._cooldown);
-        this._cooldown += 30000;
-        this.day();
+        this.nighted = true;
     }
 
     /**

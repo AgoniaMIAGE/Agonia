@@ -7,7 +7,7 @@ export class Boss extends Enemy {
 
     
     public override async CreateEnemy(position: Vector3): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "boss.glb", this.scene);
+        const result = await SceneLoader.ImportMeshAsync("", "./models/", "monster.glb", this.scene);
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
         env.position = position;
@@ -19,15 +19,14 @@ export class Boss extends Enemy {
         this.zombieMeshes = env;
 
         //Animations
-        this._attack = this.scene.getAnimationGroupByName("Skeletonzombie_t_avelange.Mutant_Jump_Attack_1");
-        this._fallingBack = this.scene.getAnimationGroupByName("Skeletonzombie_t_avelange.Falling_Back_Death_1");
-        this._hit = this.scene.getAnimationGroupByName("Skeletonzombie_t_avelange.Zombie_Reaction_Hit_1");
-        this._idle = this.scene.getAnimationGroupByName("Skeletonzombie_t_avelange.Idle_(1)");
-        this._run = this.scene.getAnimationGroupByName("Skeletonzombie_t_avelange.Fast_Run_1");
-        this._walk = this.scene.getAnimationGroupByName("Skeletonzombie_t_avelange.Walking_1");
-        this._scream = this.scene.getAnimationGroupByName("Skeletonzombie_t_avelange.Zombie_Scream_1");
+        this._attack = this.scene.getAnimationGroupByName("Monster_01.Sit_Attack_2");
+        this._fallingBack = this.scene.getAnimationGroupByName("Monster_01.Sit_Dead_1");
+        this._hit = this.scene.getAnimationGroupByName("Monster_01.Sit_Get_Hit_1");
+        this._idle = this.scene.getAnimationGroupByName("Monster_01.Sit_Idle_2");
+        this._run = this.scene.getAnimationGroupByName("Monster_01.Sit_Run");
+        this._walk = this.scene.getAnimationGroupByName("Monster_01.Sit_Walk");
+        this._scream = this.scene.getAnimationGroupByName("Monster_01.Sit_Shout");
         this._setUpAnimations();
-        this._animateZombie()
 
         allMeshes.map(allMeshes => {
             allMeshes.checkCollisions = true;

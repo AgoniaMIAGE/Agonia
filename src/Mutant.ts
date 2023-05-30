@@ -6,7 +6,7 @@ import { Enemy } from "./Enemy";
 export class Mutant extends Enemy {
 
     public override async CreateEnemy(position: Vector3): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "mutant.glb", this.scene);
+        const result = await SceneLoader.ImportMeshAsync("", "./models/", "monster2.glb", this.scene);
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
         env.position = position;
@@ -18,15 +18,14 @@ export class Mutant extends Enemy {
         this.zombieMeshes = env;
 
         //Animations
-        this._attack = this.scene.getAnimationGroupByName("Parasite_l_starkie.Mutant_Jump_Attack");
-        this._fallingBack = this.scene.getAnimationGroupByName("Parasite_l_starkie.Falling_Back_Death");
-        this._hit = this.scene.getAnimationGroupByName("Parasite_l_starkie.Zombie_Reaction_Hit");
-        this._idle = this.scene.getAnimationGroupByName("Parasite_l_starkie.Idle_(1)");
-        this._run = this.scene.getAnimationGroupByName("Parasite_l_starkie.Fast_Run");
-        this._walk = this.scene.getAnimationGroupByName("Parasite_l_starkie.Walking");
-        this._scream = this.scene.getAnimationGroupByName("Parasite_l_starkie.Zombie_Scream");
+        this._attack = this.scene.getAnimationGroupByName("Monster_03.Sit_Attack_2");
+        this._fallingBack = this.scene.getAnimationGroupByName("Monster_03.Sit_Dead_1");
+        this._hit = this.scene.getAnimationGroupByName("Monster_03.Sit_Get_Hit_1");
+        this._idle = this.scene.getAnimationGroupByName("Monster_03.Sit_Idle_2");
+        this._run = this.scene.getAnimationGroupByName("Monster_03.Sit_Run");
+        this._walk = this.scene.getAnimationGroupByName("Monster_03.Sit_Walk");
+        this._scream = this.scene.getAnimationGroupByName("Monster_03.Sit_Shout");
         this._setUpAnimations();
-        this._animateZombie()
 
         allMeshes.map(allMeshes => {
             allMeshes.checkCollisions = true;

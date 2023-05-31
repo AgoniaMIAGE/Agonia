@@ -119,7 +119,7 @@ class App {
         imageRect.addControl(startbg);
 
         const howToPlayImage = new Image("howToPlayImage", "/sprites/tuto.png");
-        howToPlayImage.width = 0.5;
+        howToPlayImage.width = 0.55;
         howToPlayImage.height = 0.7;
         imageRect.addControl(howToPlayImage);
         howToPlayImage.isVisible = false; // Initiallement cachée

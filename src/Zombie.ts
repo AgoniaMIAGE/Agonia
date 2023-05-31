@@ -42,7 +42,6 @@ export class Zombie extends Enemy {
         let hitboxMaterial = new StandardMaterial("hitboxMaterial", this.scene);
         hitboxMaterial.alpha = 0.01;
         hitbox.material = hitboxMaterial;
-        hitbox.showBoundingBox = true;
 
     }
 }

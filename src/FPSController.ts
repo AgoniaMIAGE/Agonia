@@ -121,7 +121,7 @@ export class FPSController {
     private canOpenDoor1: boolean = true;
     private canOpenDoor2: boolean = false;
     private canOpenDoor3: boolean = false;
-    private canOpenDoor4: boolean = true;
+    private canOpenDoor4: boolean = false;
 
     //swap weapons
     private handPistol: boolean = false;
@@ -197,6 +197,7 @@ export class FPSController {
         this.setuplight();
         this.setupAllMeshes();
         this.handleInteraction();
+        this.deleteBug();
         this.update();
 
         this.i = 0;
@@ -1021,6 +1022,10 @@ export class FPSController {
         animation.play();
     }
 
+    private async deleteBug()  {
+        await this._scene.getMeshByName("IA_Lantern_primitive1").dispose();
+    }
+
 
     private async createAllWeapons(): Promise<any> {
         await this.createWeapon1();
@@ -1541,6 +1546,16 @@ export class FPSController {
                                 this.canOpenDoor2 = true;
                                 this._keySound.play();
                             }
+                            if (this.examiningObjectMesh.name === "I_Key04") {
+                                this.examiningObjectMesh.setEnabled(false);
+                                this.examiningObject = false;
+                                this.firstChild = this._weapon;
+                                this.firstChild.setEnabled(true);
+                                this._canvas.focus();
+                                this.enableCameraMovement();
+                                this.canOpenDoor4 = true;
+                                this._keySound.play();
+                            }
                             if (this.examiningObjectMesh.name === "IA_Axe") {
                                 this.examiningObjectMesh.setEnabled(false);
                                 this.examiningObject = false;
@@ -1901,7 +1916,7 @@ export class FPSController {
             if (document.pointerLockElement === this._canvas && this.examiningObject) {
                 // Perform rotation based on the mouse movement
                 object.rotate(Axis.Y, event.movementX * 0.01, Space.WORLD);
-                object.rotate(Axis.X, event.movementY * 0.01, Space.WORLD);
+                object.rotate(Axis.X, -event.movementY * 0.01, Space.WORLD);
 
             }
         };
@@ -2181,7 +2196,7 @@ export class FPSController {
         advancedTexture.addControl(grid);
 
         // The code that the user needs to enter
-        const correctCode = "3223";
+        const correctCode = "3221";
 
         // The code that the user has entered
         let enteredCode = "";
@@ -2270,6 +2285,10 @@ export class FPSController {
                         // Réinitialiser le code entré
                         enteredCode = "";
                         codeDisplay.text = enteredCode;
+                    }
+                    if (buttonValues[i][j] === 'Z' || buttonValues[i][j] === 'Q' || buttonValues[i][j] === 'D' || buttonValues[i][j] === 'S') {
+                            isHUDVisible = false; // Hide the HUD
+                            this.disableHUD(grid, codeDisplay, messageDisplay);
                     }
                 });
                 grid.addControl(button, i, j);

@@ -447,6 +447,7 @@ class App {
         this._fps.diableCarpet();
         this._scene.attachControl();
         this._fps.openDoorAtStart();
+        this._fps.deleteBug();
         //this._fps.spawnGhost2();
         this._fps.spawnGhost1();
         this._fps.spawnboxTrigger1();

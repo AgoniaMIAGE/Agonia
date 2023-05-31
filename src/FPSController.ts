@@ -197,7 +197,6 @@ export class FPSController {
         this.setuplight();
         this.setupAllMeshes();
         this.handleInteraction();
-        this.deleteBug();
         this.update();
 
         this.i = 0;
@@ -238,6 +237,7 @@ export class FPSController {
         this._doorSlamSound = new Sound("doorslam", "sounds/doorslam.mp3", this._scene);
         this._horrorViolinSound = new Sound("horrorviolin", "sounds/horrorviolin.mp3", this._scene);
         this._horrorGhostTriggerSound = new Sound("horrorghosttrigger", "sounds/horrorghosttrigger.mp3", this._scene);
+        this._horrorGhostTriggerSound.setVolume(0.2);
         this._heartbeatSound = new Sound("heartbeat", "sounds/heartbeat.mp3", this._scene);
         this._breathingShound = new Sound("breathing", "sounds/breathing.mp3", this._scene);
         this._horrorSound = new Sound("horrorsound", "sounds/horrorsound.mp3", this._scene);
@@ -806,7 +806,7 @@ export class FPSController {
      * create the flashlight
      */
     private setuplight() {
-        this._light = new SpotLight("flashlight", new Vector3(0, 1, 0), new Vector3(0, 0, 1), Math.PI / 3, 2, this._scene);
+        this._light = new SpotLight("flashlight", new Vector3(0.08, -0.05, 0.8), new Vector3(0, -0.2, 1), Math.PI / 3, 2, this._scene);
         this._light.intensity = 500;
         this._light.setEnabled(false);
         this.bougieLight = new PointLight("bougie", new Vector3(0, 2, 0), this._scene);
@@ -1022,7 +1022,7 @@ export class FPSController {
         animation.play();
     }
 
-    private async deleteBug()  {
+    public async deleteBug()  {
         await this._scene.getMeshByName("IA_Lantern_primitive1").dispose();
     }
 
@@ -1862,44 +1862,16 @@ export class FPSController {
         if (object.name === "IR_Battery01" || object.name === "IR_Battery01 (1)") {
             this._itemPickUpSound.play();
         }
-        if (object.name === "Book_01.001" || object.name === "Book_03.001" || object.name === "Book_04.001") {
+        if (object.name === "Book_01.001" || object.name === "Book_03.001" || object.name === "Book_04.001" || object.name === "Book_02.001") {
             this._bookSound.play();
         }
 
-        if (object.name === "Book_02.001" && this.secretPassageCpt === 0) {
+        if (object.getChildMeshes().some(mesh => mesh.name === "Object_2") && this.secretPassageCpt === 0) {
             this._bookSound.play();
             this._secretPassage1.play();
             const mesh = this._scene.getMeshByName("Bookshelf_Big.001")
-            const initialRotationQuaternion = mesh.rotationQuaternion;
-            const initialEulerAngles = initialRotationQuaternion.toEulerAngles();
-            var targetEulerAngles = new Vector3(initialEulerAngles.x + (90 / 57.3), initialEulerAngles.y + (90 / 57.3), initialEulerAngles.z + (90 / 57.3)); // Ajouter 90 degrés
-            // Création de l'animation
-            const animation = new Animation(
-                'rotationAnimation', // Nom de l'animation
-                'rotationQuaternion', // Propriété à animer (rotationQuaternion)
-                60, // Nombre de frames par seconde
-                Animation.ANIMATIONTYPE_QUATERNION, // Type d'animation (quaternion)
-                Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
-            );
+            this.animationPosition(mesh, -0.024, -3.9, 260, false, true);
 
-            const keys = [
-                { frame: 0, value: initialRotationQuaternion }, // Frame initiale
-                { frame: 260, value: Quaternion.RotationYawPitchRoll(targetEulerAngles.y, targetEulerAngles.x, targetEulerAngles.z) } // Frame finale
-            ];
-
-            // Ajout des frames à l'animation
-            animation.setKeys(keys);
-
-            // Attacher l'animation à l'objet
-            mesh.animations = [];
-            mesh.animations.push(animation);
-
-            // Lancer l'animation
-            this._scene.beginAnimation(mesh, 0, 260, false).onAnimationEnd = () => {
-                mesh.checkCollisions = false;
-                this._scene.getTransformNodeByName("Bookshelf_Books.004").setEnabled(false);
-                this._scene.getMeshByName("Chalice").setEnabled(false);
-            }
             this.secretPassageCpt++;
         }
 
@@ -1915,7 +1887,7 @@ export class FPSController {
             // Check if the pointer is locked and if the object is being examined
             if (document.pointerLockElement === this._canvas && this.examiningObject) {
                 // Perform rotation based on the mouse movement
-                object.rotate(Axis.Y, event.movementX * 0.01, Space.WORLD);
+                object.rotate(Axis.Y, -event.movementX * 0.01, Space.WORLD);
                 object.rotate(Axis.X, -event.movementY * 0.01, Space.WORLD);
 
             }

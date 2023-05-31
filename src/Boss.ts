@@ -33,7 +33,7 @@ export class Boss extends Enemy {
         this._animation1 = this.scene.getAnimationGroupByName("Monster_01.Sit_On_The_Celing_Idle");
         this._setUpAnimations();
         // Create hitbox mesh
-        let hitbox = MeshBuilder.CreateBox("hitboxZ", { size: 1 }, this.scene);
+        let hitbox = MeshBuilder.CreateBox("hitboxB", { size: 1 }, this.scene);
         hitbox.position.y = 0.4;
 
         // Attach hitbox to the enemy mesh

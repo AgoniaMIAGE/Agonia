@@ -5,34 +5,44 @@ import { Enemy } from "./Enemy";
 
 export class Zombie extends Enemy {
 
-    public override async CreateEnemy(position: Vector3): Promise<any> {
-    const result = await SceneLoader.ImportMeshAsync("", "./models/", "monster1.glb", this.scene);
-    let env = result.meshes[0];
-    let allMeshes = env.getChildMeshes();
-    env.position = position;
-    env.scaling = new Vector3(1, 1, -1);
-    env.name = this.name;
-    this.maxHealth = 70;
-    this.damage = 5;
-    this.currentHealth = this.maxHealth;
-    this.zombieMeshes = env;
+    public override async CreateEnemy(): Promise<any> {
+        const result = await SceneLoader.ImportMeshAsync("", "./models/", "monster1.glb", this.scene);
+        let env = result.meshes[0];
+        let allMeshes = env.getChildMeshes();
+        env.position = new Vector3(18.092, 0, 202.525);
+        env.scaling = new Vector3(1, 1, -1);
+        env.name = this.name;
+        this.maxHealth = 70;
+        this.damage = 5;
+        this.currentHealth = this.maxHealth;
+        this.zombieMeshes = env;
+        this.targetMesh = this.scene.getMeshByName("Monster_04_MEsh");
+        this.maxHealth = 150;
+        this.damage = 20;
+        //Animations
+        this._attack = this.scene.getAnimationGroupByName("Monster_04.Sit_Attack_6");
+        this._fallingBack = this.scene.getAnimationGroupByName("Monster_04.Sit_Dead_1");
+        this._hit = this.scene.getAnimationGroupByName("Monster_04.Sit_Get_Hit_1");
+        this._idle = this.scene.getAnimationGroupByName("Monster_04.Sit_Idle_1");
+        this._run = this.scene.getAnimationGroupByName("Monster_04.Sit_Run");
+        this._walk = this.scene.getAnimationGroupByName("Monster_04.Sit_Run");
+        this._scream = this.scene.getAnimationGroupByName("Monster_04.Sit_Shout");
+        this._sleep = this.scene.getAnimationGroupByName("Monster_04.Sit_Sleep");
+        this._animation1 = this.scene.getAnimationGroupByName("Monster_04.Sit_On_The_Celing_Idle");
+        this._setUpAnimations();
 
-    //Animations
-    this._attack = this.scene.getAnimationGroupByName("Monster_04.Sit_Attack_6");
-    this._fallingBack = this.scene.getAnimationGroupByName("Monster_04.Sit_Dead_1");
-    this._hit = this.scene.getAnimationGroupByName("Monster_04.Sit_Get_Hit_1");
-    this._idle = this.scene.getAnimationGroupByName("Monster_04.Sit_Idle_2");
-    this._run = this.scene.getAnimationGroupByName("Monster_04.Sit_Run");
-    this._walk = this.scene.getAnimationGroupByName("Monster_04.Sit_Walk");
-    this._scream = this.scene.getAnimationGroupByName("Monster_04.Sit_Shout");
-    this._sleep = this.scene.getAnimationGroupByName("Monster_04.Sit_Sleep");
-    this._animation1 = this.scene.getAnimationGroupByName("Monster_04.Sit_On_The_Celing_Idle")
-    this._setUpAnimations();
+        // Create hitbox mesh
+        let hitbox = MeshBuilder.CreateBox("hitboxZ", { size: 1 }, this.scene);
+        hitbox.position.y = 0.4;
 
-    allMeshes.map(allMeshes => {
-        allMeshes.checkCollisions = true;
-        allMeshes.ellipsoid = new Vector3(1, -0.5, 1);
-    })
+        // Attach hitbox to the enemy mesh
+        hitbox.parent = env;
 
-}
+        // Make the hitbox invisible
+        let hitboxMaterial = new StandardMaterial("hitboxMaterial", this.scene);
+        hitboxMaterial.alpha = 0.01;
+        hitbox.material = hitboxMaterial;
+        hitbox.showBoundingBox = true;
+
+    }
 }

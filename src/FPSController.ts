@@ -1,4 +1,4 @@
-import { Animation, Tools, Observer, CreateBox, RayHelper, EasingFunction, CannonJSPlugin, MeshBuilder, StandardMaterial, InstancedMesh, PointParticleEmitter, IAnimationKey, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
+import { Animation, Tools, Observer, ConeParticleEmitter, CreateBox, RayHelper, EasingFunction, CannonJSPlugin, MeshBuilder, StandardMaterial, InstancedMesh, PointParticleEmitter, IAnimationKey, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
 import { float } from "babylonjs";
 import { SolidParticle } from 'babylonjs/Particles/solidParticle';
 import { Boss } from "./Boss";
@@ -45,6 +45,8 @@ export class FPSController {
 
     public static _ammo: int = 30;
     public static _max_ammo: int = 30;
+    private static pistol_ammo: int = 0;
+    private static rifle_ammo: int = 0;
 
     //sounds
     private _weaponSound: Sound;
@@ -102,6 +104,7 @@ export class FPSController {
     private _aim_shot: AnimationGroup;
     private _aim_idle: AnimationGroup;
     private _heal: AnimationGroup
+    private ghostCast02Animation: AnimationGroup;
 
     //Keys
     private zPressed: boolean = false;
@@ -137,6 +140,7 @@ export class FPSController {
     private pistolet: AbstractMesh[] = [];
     private ar15names: string[] = [];
     private pistoletnames: string[] = [];
+    private flash: ParticleSystem;
 
 
     //examining object 
@@ -166,8 +170,7 @@ export class FPSController {
     private ghostDodgeAnimation: AnimationGroup;
     private planksCpt: number = 5;
     private secretPassageCpt: number = 0;
-    private animationEndFunction: () => void
-
+    private muzzleLight: PointLight;
     // firing animation flag
     private isFiring: boolean = false;
 
@@ -309,7 +312,7 @@ export class FPSController {
                     // }
                 }
                 if (this._camera.position.x >= 20.2) {
-                    if (this.doorCpt === 1 && !this.canOpenDoor2) {
+                    if (this.doorCpt === 0 && !this.canOpenDoor2) {
                         const object = this._scene.getMeshByName("DoorHouse.002")
                         const animationDuration = 10; // Durée de l'animation en millisecondes
                         const initialRotationQuaternion = object.rotationQuaternion;
@@ -355,7 +358,7 @@ export class FPSController {
                 }
                 if (this.boxMesh1.intersectsPoint(this._camera.position))//trigger ghost1
                 {
-                    if (this.ghostCpt === 1) {
+                    if (this.ghostCpt === 0) {
                         if (this._camera.target.z > 188.40) {
                             this._camera.rotation.y = -1.7452;
                             this._camera.rotation.x = -0.087;
@@ -382,7 +385,7 @@ export class FPSController {
                 }
                 if (this.boxMesh2.intersectsPoint(this._camera.position))//trigger ghost 2
                 {
-                    if (this.ghostCpt2 === 1) {
+                    if (this.ghostCpt2 === 0) {
                         this._camera.target.x = 26.767;
                         this._camera.target.y = 2.039;
                         this._camera.target.z = 187;
@@ -430,7 +433,7 @@ export class FPSController {
                 {
                     this.ghostMesh1.setEnabled(true);
                 }
-                if (this.planksCpt < -1) {
+                if (this.planksCpt < 1) {
                     if (this.ghostCpt3 === 0) {
                         this.ghostMesh1.setEnabled(true);
                         this._horrorSound.play();
@@ -494,35 +497,63 @@ export class FPSController {
                                 this.ghostWalkAnimation.play();
                                 this.ghostWalkAnimation.onAnimationGroupEndObservable.add(() => {
                                     this.ghostMesh1.position.y = -8;
-                                    this.ghostDodgeAnimation.play();
-                                    var animation;
-                                    // Création de l'animation
-                                    animation = new Animation(
-                                        'positionAnimation', // Nom de l'animation
-                                        'position.y', // Propriété à animer (position.z)
-                                        60, // Nombre de frames par seconde
-                                        Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
-                                        Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
-                                    );
+                                    this.ghostCast02Animation.speedRatio = 0.5;
+                                    this.ghostCast02Animation.play();
+                                    this.ghostCast02Animation.onAnimationGroupEndObservable.add(() => {
+
+                                        var animation;
+                                        this.ghostTurnRightAnimation.onAnimationGroupEndObservable.remove(this.ghostTurnRightEndObserver);
+                                        animation = new Animation(
+                                            'rotationAnimation',
+                                            'rotation.x',
+                                            60,
+                                            Animation.ANIMATIONTYPE_FLOAT,
+                                            Animation.ANIMATIONLOOPMODE_CONSTANT
+                                        );
 
 
-                                    // Création de la liste des frames de l'animation
-                                    const keys: IAnimationKey[] = [
-                                        { frame: 0, value: this.ghostMesh1.position.y }, // Frame initiale
-                                        { frame: 50, value: this.ghostMesh1.position.y - 30 } // Frame finale
-                                    ];
+                                        const keys: IAnimationKey[] = [
+                                            { frame: 0, value: this.ghostMesh1.rotation.x }, // Frame initiale
+                                            { frame: 50, value: this.ghostMesh1.rotation.x - 3.1411937 } // Frame finale
+                                        ]
 
-                                    // Ajout des frames à l'animation
-                                    animation.setKeys(keys);
+                                        animation.setKeys(keys);
+
+                                        this.ghostMesh1.animations = [];
+                                        this.ghostMesh1.animations.push(animation);
+                                        this._scene.beginAnimation(this.ghostMesh1, 0, 50, false).onAnimationEnd = () => {
+                                            this.ghostDodgeAnimation.play();
+                                            var animation;
+                                            // Création de l'animation
+                                            animation = new Animation(
+                                                'positionAnimation', // Nom de l'animation
+                                                'position.y', // Propriété à animer (position.z)
+                                                60, // Nombre de frames par seconde
+                                                Animation.ANIMATIONTYPE_FLOAT, // Type d'animation (float)
+                                                Animation.ANIMATIONLOOPMODE_CONSTANT // Mode de boucle (constant)
+                                            );
 
 
-                                    // Attacher l'animation à l'objet
-                                    this.ghostMesh1.animations = [];
-                                    this.ghostMesh1.animations.push(animation);
-                                    // Lancer l'animation
-                                    this._scene.beginAnimation(this.ghostMesh1, 0, 50, false).onAnimationEnd = () => {
-                                        this.enableCameraMovement();
-                                    }
+                                            // Création de la liste des frames de l'animation
+                                            const keys: IAnimationKey[] = [
+                                                { frame: 0, value: this.ghostMesh1.position.y }, // Frame initiale
+                                                { frame: 50, value: this.ghostMesh1.position.y - 30 } // Frame finale
+                                            ];
+
+                                            // Ajout des frames à l'animation
+                                            animation.setKeys(keys);
+
+
+                                            // Attacher l'animation à l'objet
+                                            this.ghostMesh1.animations = [];
+                                            this.ghostMesh1.animations.push(animation);
+                                            // Lancer l'animation
+                                            this._scene.beginAnimation(this.ghostMesh1, 0, 50, false).onAnimationEnd = () => {
+                                                this.enableCameraMovement();
+                                            }
+                                        }
+
+                                    })
                                 })
                             };
                         };
@@ -622,9 +653,11 @@ export class FPSController {
                 break;
             case "pistol":
                 this.createPistol();
+                Enemy.unleashEnemies = true;
                 break;
             case "ar15":
                 this.createRifle();
+                Enemy.unleashEnemies = true;
                 break;
             case "seringue":
                 this.createSeringue();
@@ -692,7 +725,7 @@ export class FPSController {
                                 } else {
                                     this.bougie(true);
                                 }
-                            } if (this._weapon.getChildMeshes()[0]?.name === "Arm_mesh001" || this._weapon.getChildMeshes()[0]?.name === "Arm_mesh002" || this._weapon.getChildMeshes()[0]?.name === "Base_mesh") { 
+                            } if (this._weapon.getChildMeshes()[0]?.name === "Arm_mesh001" || this._weapon.getChildMeshes()[0]?.name === "Arm_mesh002" || this._weapon.getChildMeshes()[0]?.name === "Base_mesh") {
                                 if (this._light.isEnabled()) {
                                     this.flashlight(false);
                                 } else {
@@ -778,8 +811,10 @@ export class FPSController {
         this.bougieLight = new PointLight("bougie", new Vector3(0, 2, 0), this._scene);
         this.bougieLight.intensity = 12;
         this.bougieLight.setEnabled(false);
-        this.lanternLight = new PointLight("lantern", new Vector3(0, -1, 0), this._scene);
-        this.lanternLight.intensity = 150;
+        this.lanternLight = new PointLight("lantern", new Vector3(0, 0, 0), this._scene);
+        this.lanternLight.intensity = 10;
+        this.lanternLight.range = 10;
+        this.lanternLight.diffuse = new Color3(255 / 255, 247 / 255, 202 / 255);
         this.lanternLight.setEnabled(false);
 
 
@@ -822,7 +857,7 @@ export class FPSController {
      * zombie's meshes, used to know if the zombie is hit
      */
     private setupAllMeshes() {
-        this._zMeshes = ["Monster_01_MEsh", "Monster_03_MEsh", "Monster_04_MEsh"];
+        this._zMeshes = ["hitboxB", "hitboxM", "hitboxZ"];
     }
 
     /**
@@ -875,20 +910,22 @@ export class FPSController {
                     var length = 1000;
 
                     var ray = new Ray(origin, direction, length);
+                    this.muzzleFlash();
 
                     var hit = this._scene.pickWithRay(ray);
+                    console.log("1",hit.pickedMesh.name);
                     this.changeState(CharacterState.AimShot);
                     for (let i = 0; i < this._zMeshes.length; i++) {
                         console.log(hit.pickedMesh.name);
                         if (hit.pickedMesh.name == this._zMeshes[i]) {
                             switch (this._zMeshes[i]) {
-                                case "Monster_01_MEsh":
+                                case "hitboxB":
                                     this._boss.getHit(this._damage);
                                     break;
-                                case "Monster_03_MEsh":
+                                case "hitboxM":
                                     this._mutant.getHit(this._damage);
                                     break;
-                                case "Monster_04_MEsh":
+                                case "hitboxZ":
                                     this._zombie.getHit(this._damage);
                             }
                         }
@@ -917,17 +954,19 @@ export class FPSController {
 
                     this.changeState(CharacterState.Fire);
 
+                    this.muzzleFlash();
+
                     for (let i = 0; i < this._zMeshes.length; i++) {
                         console.log(hit.pickedMesh.name);
                         if (hit.pickedMesh.name == this._zMeshes[i]) {
                             switch (this._zMeshes[i]) {
-                                case "Monster_01_MEsh":
+                                case "hitboxB":
                                     this._boss.getHit(this._damage);
                                     break;
-                                case "Monster_03_MEsh":
+                                case "hitboxM":
                                     this._mutant.getHit(this._damage);
                                     break;
-                                case "Monster_04_MEsh":
+                                case "hitboxZ":
                                     this._zombie.getHit(this._damage);
                             }
                         }
@@ -1000,6 +1039,9 @@ export class FPSController {
         this.allWeapons[0].setEnabled(true);
         this._weapon = this.allWeapons[0];
         this.createFlareCandle(this.allWeapons[0]);
+        this.createMuzzleFlash(this.allWeapons[4]);
+        this.createMuzzleFlash(this.allWeapons[3]);
+
     }
 
 
@@ -1123,14 +1165,13 @@ export class FPSController {
     //rifle and its variables/stats
     private async createSeringue(): Promise<any> {
         var lastWeapon = null;
-        if(this.handPistol)
-        {
+        if (this.handPistol) {
             lastWeapon = "pistol";
         }
-        else if(this.handRifle){
+        else if (this.handRifle) {
             lastWeapon = "ar15";
         }
-        else{
+        else {
             lastWeapon = "pistol";
         }
         console.log(lastWeapon);
@@ -1157,13 +1198,14 @@ export class FPSController {
         this._weaponSound.play();
 
         this._heal.onAnimationGroupEndObservable.add(() => {
-            this.swap(this._weapon, lastWeapon);    
+            this.swap(this._weapon, lastWeapon);
         });
 
     }
 
     //rifle and its variables/stats
     private async createRifle(): Promise<any> {
+        FPSController.pistol_ammo = FPSController._ammo;
         if (!this.inventory2) {
             this.inventory2 = true;
         }
@@ -1202,10 +1244,16 @@ export class FPSController {
 
         //audio effect 
         this._weaponSound = new Sound("attack", "sounds/riflesound.mp3", this._scene);
+
+        this._damage = 10;
+        FPSController._ammo = FPSController.rifle_ammo;
+        FPSController._max_ammo = 30;
+
     }
 
     //Pistol and its variables/stats
     private async createPistol(): Promise<any> {
+        FPSController.rifle_ammo = FPSController._ammo;
         if (!this.inventory1) {
             this.inventory1 = true;
         }
@@ -1247,6 +1295,10 @@ export class FPSController {
 
         //audio effect 
         this._weaponSound = new Sound("attack", "sounds/pistolsound.mp3", this._scene);
+
+        this._damage = 20;
+        FPSController._ammo = FPSController.pistol_ammo;
+        FPSController._max_ammo = 7;
     }
 
 
@@ -1266,52 +1318,6 @@ export class FPSController {
             this._weapon = this.allWeapons[0];
         }
 
-    }
-
-    //Shotgun and its variables/stats
-    private async createShotgun(): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "shotgun.glb", this._scene);
-
-        let env = result.meshes[0];
-        let allMeshes = env.getChildMeshes();
-        env.parent = this._camera;
-        this._weapon = env;
-        for (let i = 1; i < 9; i++) {
-            result.meshes[i].renderingGroupId = 1;
-        }
-        result.meshes[0].position = new Vector3(0, -1.7, 0.2);
-        result.meshes[0].rotation = new Vector3(0, 0, 0);
-        result.meshes[0].scaling = new Vector3(1, 1, -1);
-
-        //audio effect 
-        this._weaponSound = new Sound("shotgunsound", "sounds/shotgun.mp3", this._scene);
-        this._reloadSound = new Sound("shotgunsoundreload", "sounds/shotgun-reload.mp3", this._scene);
-
-        //animations
-        this._end = this._scene.getAnimationGroupByName("Hands_Shotgun.Hide");
-        this._fire = this._scene.getAnimationGroupByName("Hands_Shotgun.Shot");
-        this._idle = this._scene.getAnimationGroupByName("Hands_Shotgun.Idle");
-        this._reload = this._scene.getAnimationGroupByName("Hands_Shotgun.Recharge");
-        this._run = this._scene.getAnimationGroupByName("Hands_Shotgun.Run");
-        this._start = this._scene.getAnimationGroupByName("Hands_Shotgun.Get");
-        this._walk = this._scene.getAnimationGroupByName("Hands_Shotgun.Walk");
-        this._aim_walk = this._scene.getAnimationGroupByName("Hands_Shotgun.Aming_Walk");
-        this._aim_shot = this._scene.getAnimationGroupByName("Hands_Shotgun.Aming_Shot");
-        this._aim_idle = this._scene.getAnimationGroupByName("Hands_Shotgun.Aming_Idle");
-        this._run.loopAnimation = true;
-        this._idle.loopAnimation = true;
-        this._walk.loopAnimation = true;
-        this._aim_walk.loopAnimation = true;
-
-
-        this._damage = 50;
-        FPSController._ammo = 10;
-        FPSController._max_ammo = 10;
-
-        return {
-            mesh: env as Mesh,
-            animationGroups: result.animationGroups
-        }
     }
 
     //Pistol and its variables/stats
@@ -1716,6 +1722,7 @@ export class FPSController {
         console.log(this.ghostMesh1.rotation.y);
         this.ghostScareAnimation1 = this._scene.getAnimationGroupByName("Weeper_DEMO.Cast02end");
         this.ghostCast01Animation = this._scene.getAnimationGroupByName("Weeper_DEMO.Cast01");
+        this.ghostCast02Animation = this._scene.getAnimationGroupByName("Weeper_DEMO.Cast02start");
         this.ghostTauntAnimation = this._scene.getAnimationGroupByName("Weeper_DEMO.Taunt");
         this.ghostTurnRightAnimation = this._scene.getAnimationGroupByName("Weeper_DEMO.TurnRight");
         this.ghostTurnLeftAnimation = this._scene.getAnimationGroupByName("Weeper_DEMO.TurnLeft");
@@ -1724,6 +1731,7 @@ export class FPSController {
         this.ghostWalkAnimation.speedRatio = 4;
         this.ghostCast01Animation.loopAnimation = false;
         this.ghostWalkAnimation.loopAnimation = false;
+        this.ghostCast02Animation.loopAnimation = false;
         this.ghostDodgeAnimation.loopAnimation = false;
         this.ghostTurnRightEndObserver = this.ghostTurnRightAnimation.onAnimationGroupEndObservable.add(() => {
             this.animationPositionGhost2(this.ghostMesh1, this.ghostMesh1.position.y, this.ghostMesh1.position.y - 14.5, 60, false, true);
@@ -2620,6 +2628,34 @@ export class FPSController {
         // Stocker les meshes dans un tableau
         this.pistolet = [pistolet_primitive0, pistolet_primitive1];
 
+    }
+
+    private createMuzzleFlash(gunMesh: AbstractMesh) {
+        // Create a small, invisible box
+        let emitterBox = MeshBuilder.CreateBox("emitterBox", { size: 0.1 }, this._scene);
+        emitterBox.isVisible = false;
+
+        // Attach it to the gun
+        emitterBox.parent = gunMesh;
+
+        // Position it at the end of the gun barrel
+        emitterBox.position = new Vector3(0.07, 1.6, -0.8); // adjust to match your model
+
+        this.muzzleLight = new PointLight('muzzleLight', new Vector3(0, 0, 0), this._scene);
+        // Attach it to the gun
+        this.muzzleLight.parent = emitterBox;
+        // Position it at the end of the gun barrel
+        this.muzzleLight.position = new Vector3(0, 0, 0); // adjust to match your model
+        // Set its initial intensity to zero
+        this.muzzleLight.intensity = 0;        
+    }
+
+
+    private muzzleFlash() {
+        this.muzzleLight.intensity = 30; // adjust the intensity to match your needs
+        setTimeout(() => {
+            this.muzzleLight.intensity = 0;
+        }, 100);
     }
 
 

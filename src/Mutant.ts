@@ -4,18 +4,22 @@ import { FPSController } from "./FPSController";
 import { Enemy } from "./Enemy";
 
 export class Mutant extends Enemy {
+    public isSleeping: Boolean;
 
-    public override async CreateEnemy(position: Vector3): Promise<any> {
+    public override async CreateEnemy(): Promise<any> {
         const result = await SceneLoader.ImportMeshAsync("", "./models/", "monster2.glb", this.scene);
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
-        env.position = position;
+        env.position = new Vector3(26.519 , 0 , 182.086);
         env.scaling = new Vector3(1.5, 1.5, -1.5);
         env.name = this.name;
         this.maxHealth = 130;
         this.damage = 26;
         this.currentHealth = this.maxHealth;
         this.zombieMeshes = env;
+        this.targetMesh = this.scene.getMeshByName("Creature_03_Mesh");
+        this.maxHealth = 300;
+        this.damage = 26;
 
         //Animations
         this._attack = this.scene.getAnimationGroupByName("Monster_03.Sit_Attack_2");
@@ -25,12 +29,22 @@ export class Mutant extends Enemy {
         this._run = this.scene.getAnimationGroupByName("Monster_03.Sit_Run");
         this._walk = this.scene.getAnimationGroupByName("Monster_03.Sit_Walk");
         this._scream = this.scene.getAnimationGroupByName("Monster_03.Sit_Shout");
+        this._sleep = this.scene.getAnimationGroupByName("Monster_03.Sit_Sleep");
+        this._animation1 = this.scene.getAnimationGroupByName("Monster_03.Sit_On_The_Celing_Idle");
         this._setUpAnimations();
+        // Create hitbox mesh
+        let hitbox = MeshBuilder.CreateBox("hitboxM", { size: 1 }, this.scene);
+        hitbox.position.y = 0.4;
 
-        allMeshes.map(allMeshes => {
-            allMeshes.checkCollisions = true;
-            allMeshes.ellipsoid = new Vector3(1, 1, 1);
-        })
+        // Attach hitbox to the enemy mesh
+        hitbox.parent = env;
+
+        // Make the hitbox invisible
+        let hitboxMaterial = new StandardMaterial("hitboxMaterial", this.scene);
+        hitboxMaterial.alpha = 0.01;
+        hitbox.material = hitboxMaterial;
+        hitbox.showBoundingBox = true;
+
 
     }
 

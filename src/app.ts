@@ -37,6 +37,7 @@ class App {
     private _currentRound: int = 1;
     private _isdead: boolean;
     private nighted: boolean = false;
+    public cpt2: number = 9999;
     //private customLoadingUI = new CustomLoadingUI();
 
     private difficultyLevels: string[];  // Declare difficultyLevels property
@@ -267,14 +268,43 @@ class App {
     private update() {
         this._scene.onReadyObservable.addOnce(() => {
             setInterval(() => {
+                console.log(Enemy.unleashEnemies)
+                if (Enemy.unleashEnemies) {
+
+                    if (Enemy.enemyRotation % 3 === 0 && this.cpt2 % 3 === 0 && this.cpt2 !== 9999) {
+                        this._zombie.velocity = 0.4;
+                        this._zombie.changePosition();
+                        this._mutant.sleep();
+                        this._boss.sleep();
+                        this.cpt2++;
+                    }
+
+                    else if (Enemy.enemyRotation % 3 === 1 && this.cpt2 % 3 === 1) {
+                        this._mutant.velocity = 0.2;
+                        this._mutant.changePosition();
+                        this._zombie.sleep();
+                        this._boss.sleep();
+                        this.cpt2++;
+                    }
+                    else if (Enemy.enemyRotation % 3 === 2 && this.cpt2 % 3 === 2) {
+                        this._boss.velocity = 0.2;
+                        this._boss.changePosition();
+                        this._mutant.sleep();
+                        this._zombie.sleep();
+                        this.cpt2++;
+                    }
+
+                }
+
                 if (PlayerHealth._current_Health <= 0) {
                     this._isdead = true;
                     this._state = State.LOSE;
                     this.goToLose();
                 }
-                if (this._fps.isNight && !this.nighted) {
+                if (Enemy.unleashEnemies && !this.nighted) {
                     this.night();
                     console.log("night");
+                    this.cpt2 = 0;
                 }
                 else {
                     clearInterval(1);
@@ -288,7 +318,7 @@ class App {
      */
     private async createMap(): Promise<void> {
         var light1: HemisphericLight = new HemisphericLight("light1", new Vector3(0, 1, 0), this._scene); //white light
-        light1.intensity = 0.05;
+        light1.intensity = 0.005;
         light1.range = 100;
         this._light1 = light1;
 
@@ -358,17 +388,20 @@ class App {
         }
         this._round.day();
         this._isdead = false;
+        this._zombie.currentHealth = this._zombie.maxHealth;
+        this._mutant.currentHealth = this._mutant.maxHealth;
+        this._boss.currentHealth = this._boss.maxHealth;
+        this._zombie.changePosition();
+        this._zombie.sleep();
+        this._mutant.changePosition();
+        this._mutant.sleep();
+        this._boss.changePosition();
+        this._boss.sleep();
     }
 
     // launch the night and its functions, implementations...
     private async night() {
         this._round.night();
-        this._zombie.currentHealth = this._zombie.maxHealth;
-        this._mutant.currentHealth = this._mutant.maxHealth;
-        this._boss.currentHealth = this._boss.maxHealth;
-        this._zombie.changePosition();
-        this._mutant.changePosition();
-        this._boss.changePosition();
         this.enableEnemies();
         this.nighted = true;
     }
@@ -403,6 +436,7 @@ class App {
         this._state = State.GAME;
         this._scene = this._gameScene;
         this._scene.detachControl();
+        this._engine.loadingUIText = "\nChargement en cours... \nLe chargement peut prendre quelques minutes selon votre connexion internet.\n Merci de patienter.";
         this._engine.displayLoadingUI();
         await this.createMap();
         await this._scene.whenReadyAsync();

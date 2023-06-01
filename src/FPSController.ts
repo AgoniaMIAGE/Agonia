@@ -1,5 +1,5 @@
-import { Animation, Tools, Observer, ConeParticleEmitter, CreateBox, RayHelper, EasingFunction, CannonJSPlugin, MeshBuilder, StandardMaterial, InstancedMesh, PointParticleEmitter, IAnimationKey, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
-import { float } from "babylonjs";
+import { Animation, Tools, Observer, ConeParticleEmitter, CreateBox, RayHelper, PBRMaterial, EasingFunction, CannonJSPlugin, MeshBuilder, StandardMaterial, InstancedMesh, PointParticleEmitter, IAnimationKey, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
+import { HemisphericLight, float } from "babylonjs";
 import { SolidParticle } from 'babylonjs/Particles/solidParticle';
 import { Boss } from "./Boss";
 import { Enemy } from "./Enemy";
@@ -888,10 +888,49 @@ export class FPSController {
         return v;
     }
 
+    private positions = [
+        new Vector3(7.401, 2.155, 199.327),
+        new Vector3(18.419, 2.582, 204.414),
+        /*new Vector3(30.11, 3.33, 189.33),
+        new Vector3(34.88, 3.28, 189.39),*/
+        new Vector3(39.29, 2.48, 184.07),
+    ];
+
+    private candlePositions = [
+        new Vector3(12.025, 1.667, 200.799),
+        new Vector3(7.27, 1.67, 189.44),
+        new Vector3(14.65, 1.64, 185.56),
+        new Vector3(44.36, 1.66, 184.49),
+        new Vector3(40.22, 1.50, 155.91)
+    ];
+
+
+    public createLights() {
+        this._scene.materials.forEach((material) => {
+            if (material instanceof StandardMaterial || material instanceof PBRMaterial) {
+                material.maxSimultaneousLights = 10;  // Adjust this value as needed
+            }
+        });
+        this.positions.forEach((position, index) => {
+            let light = new PointLight("pointLight" + index, position, this._scene);
+            light.intensity = 3.5;
+        });
+
+        this.createCandleLights();
+    }
+
+    public createCandleLights() {
+        this.candlePositions.forEach((position, index) => {
+            let light = new PointLight("candleLight" + index, position, this._scene);
+            light.intensity = 2; // You might want to adjust this value
+            light.diffuse = new Color3(1, 0.8, 0.4); // Yellow color
+        });
+    }
+
+
     //left click to fire, right click to aim, ammo managed bellow too
     private fire() {
         if (this.canFire && !this.isMeleeWeapon) {
-            var zombie = this._enemy;
             var origin = this._camera.position;
             if (FPSController._ammo > 0) {
                 FPSController._ammo -= 1;
@@ -914,7 +953,7 @@ export class FPSController {
                     this.muzzleFlash();
 
                     var hit = this._scene.pickWithRay(ray);
-                    console.log("1",hit.pickedMesh.name);
+                    console.log("1", hit.pickedMesh.name);
                     this.changeState(CharacterState.AimShot);
                     for (let i = 0; i < this._zMeshes.length; i++) {
                         console.log(hit.pickedMesh.name);
@@ -1022,7 +1061,7 @@ export class FPSController {
         animation.play();
     }
 
-    public async deleteBug()  {
+    public async deleteBug() {
         await this._scene.getMeshByName("IA_Lantern_primitive1").dispose();
     }
 
@@ -1045,8 +1084,6 @@ export class FPSController {
         this._weapon = this.allWeapons[0];
         this.createFlareCandle(this.allWeapons[0]);
         this.createMuzzleFlash(this.allWeapons[4]);
-        this.createMuzzleFlash(this.allWeapons[3]);
-
     }
 
 
@@ -1190,7 +1227,7 @@ export class FPSController {
             weapon.setEnabled(false);
         }
 
-        // Activer la première arme (candle dans cet exemple)
+        // Activer la première arme 
         this.allWeapons[5].setEnabled(true);
         this._weapon = this.allWeapons[5];
 
@@ -1224,7 +1261,7 @@ export class FPSController {
             weapon.setEnabled(false);
         }
 
-        // Activer la première arme (candle dans cet exemple)
+        // Activer la première arme 
         this.allWeapons[4].setEnabled(true);
         this._weapon = this.allWeapons[4];
 
@@ -1680,6 +1717,15 @@ export class FPSController {
                                     }
                                 }
                             }
+
+                            if (pickInfo && pickInfo.hit && pickInfo.pickedMesh.name.includes("Object_2") && this.secretPassageCpt === 0) {
+                                this._bookSound.play();
+                                this._secretPassage1.play();
+                                const mesh = this._scene.getMeshByName("Bookshelf_Big.001")
+                                this.animationPosition(mesh, -0.024, -3.9, 260, false, true);
+                                this.secretPassageCpt++;
+                            }
+
                             if (pickInfo && pickInfo.hit && this.canExamineDoor(pickInfo.pickedMesh)) {
                                 this.openDoor(pickInfo.pickedMesh);
                             }
@@ -1864,15 +1910,6 @@ export class FPSController {
         }
         if (object.name === "Book_01.001" || object.name === "Book_03.001" || object.name === "Book_04.001" || object.name === "Book_02.001") {
             this._bookSound.play();
-        }
-
-        if (object.getChildMeshes().some(mesh => mesh.name === "Object_2") && this.secretPassageCpt === 0) {
-            this._bookSound.play();
-            this._secretPassage1.play();
-            const mesh = this._scene.getMeshByName("Bookshelf_Big.001")
-            this.animationPosition(mesh, -0.024, -3.9, 260, false, true);
-
-            this.secretPassageCpt++;
         }
 
         this.examiningObject = true;
@@ -2259,8 +2296,8 @@ export class FPSController {
                         codeDisplay.text = enteredCode;
                     }
                     if (buttonValues[i][j] === 'Z' || buttonValues[i][j] === 'Q' || buttonValues[i][j] === 'D' || buttonValues[i][j] === 'S') {
-                            isHUDVisible = false; // Hide the HUD
-                            this.disableHUD(grid, codeDisplay, messageDisplay);
+                        isHUDVisible = false; // Hide the HUD
+                        this.disableHUD(grid, codeDisplay, messageDisplay);
                     }
                 });
                 grid.addControl(button, i, j);
@@ -2324,7 +2361,7 @@ export class FPSController {
 
     private openOil() {
         const object = this._scene.getMeshByName("IC_OilBottle");
-        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const animationDuration = 40; // Durée de l'animation en millisecondes
         const initialZ = 200.746337890625; // Position initiale de l'objet
         console.log(initialZ);
         const targetZ = 201.246337890625; // Position finale de l'ouverture du tiroir
@@ -2333,7 +2370,7 @@ export class FPSController {
 
     private closeOil() {
         const object = this._scene.getMeshByName("IC_OilBottle");
-        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const animationDuration = 40; // Durée de l'animation en millisecondes
         const initialZ = 201.246337890625; // Position initiale de l'objet
         console.log(initialZ);
         const targetZ = 200.746337890625; // Position finale de l'ouverture du tiroir
@@ -2344,7 +2381,7 @@ export class FPSController {
     private openBattery() {
         const object = this._scene.getMeshByName("IR_Battery01");
         const object2 = this._scene.getMeshByName("IR_Battery01 (1)");
-        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const animationDuration = 40; // Durée de l'animation en millisecondes
         const initialX = -44.3411504765749; // Position initiale de l'objet
         const targetX = -43.8411504765749; // Position finale de l'ouverture du tiroir
 
@@ -2355,7 +2392,7 @@ export class FPSController {
     private closeBattery() {
         const object = this._scene.getMeshByName("IR_Battery01");
         const object2 = this._scene.getMeshByName("IR_Battery01 (1)");
-        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const animationDuration = 40; // Durée de l'animation en millisecondes
         const initialX = -43.8411504765749; // Position initiale de l'objet
         const targetX = -44.3411504765749; // Position finale de l'ouverture du tiroir
 
@@ -2367,7 +2404,7 @@ export class FPSController {
     private openFlashlight() {
         const object = this._scene.getMeshByName("IA_Flashlight_primitive0");
         const object2 = this._scene.getMeshByName("IA_Flashlight_primitive1");
-        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const animationDuration = 40; // Durée de l'animation en millisecondes
         const initialPosition = 0;
         const targetPosition = 0.20;
 
@@ -2378,7 +2415,7 @@ export class FPSController {
     private closeFlashlight() {
         const object = this._scene.getMeshByName("IA_Flashlight_primitive0");
         const object2 = this._scene.getMeshByName("IA_Flashlight_primitive1");
-        const animationDuration = 20; // Durée de l'animation en millisecondes
+        const animationDuration = 40; // Durée de l'animation en millisecondes
 
         const initialPosition = 0.20;
         const targetPosition = 0;
@@ -2627,7 +2664,7 @@ export class FPSController {
         emitterBox.isVisible = false;
 
         // Attach it to the gun
-        emitterBox.parent = gunMesh;
+        emitterBox.parent = this._camera;
 
         // Position it at the end of the gun barrel
         emitterBox.position = new Vector3(0.07, 1.6, -0.8); // adjust to match your model
@@ -2638,12 +2675,12 @@ export class FPSController {
         // Position it at the end of the gun barrel
         this.muzzleLight.position = new Vector3(0, 0, 0); // adjust to match your model
         // Set its initial intensity to zero
-        this.muzzleLight.intensity = 0;        
+        this.muzzleLight.intensity = 0;
     }
 
 
     private muzzleFlash() {
-        this.muzzleLight.intensity = 30; // adjust the intensity to match your needs
+        this.muzzleLight.intensity = 20; // adjust the intensity to match your needs
         setTimeout(() => {
             this.muzzleLight.intensity = 0;
         }, 100);

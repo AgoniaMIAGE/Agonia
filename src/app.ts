@@ -10,7 +10,7 @@ import { Enemy } from "./Enemy";
 import { Mutant } from "./Mutant";
 import { Boss } from "./Boss";
 import { Zombie } from "./Zombie";
-import { UtilityLayerRenderer, Engine, int, KeyboardEventTypes, Tools, ArcRotateCamera, OimoJSPlugin, SpotLight, HemisphericLight, Scene, Animation, Vector3, Mesh, Color3, Color4, ShadowGenerator, GlowLayer, PointLight, FreeCamera, CubeTexture, Sound, PostProcess, Effect, SceneLoader, Matrix, MeshBuilder, Quaternion, AssetsManager, StandardMaterial, PBRMaterial, Material, float, Light } from "@babylonjs/core";
+import { UtilityLayerRenderer, Engine, int, KeyboardEventTypes,SceneOptimizer,SceneOptimizerOptions, Tools, ArcRotateCamera, OimoJSPlugin, SpotLight, HemisphericLight, Scene, Animation, Vector3, Mesh, Color3, Color4, ShadowGenerator, GlowLayer, PointLight, FreeCamera, CubeTexture, Sound, PostProcess, Effect, SceneLoader, Matrix, MeshBuilder, Quaternion, AssetsManager, StandardMaterial, PBRMaterial, Material, float, Light } from "@babylonjs/core";
 import { Round } from "./Round";
 //import { CustomLoadingUI } from "./CustomLoadingUi";
 
@@ -27,7 +27,6 @@ class App {
     private _velocity2: float;
     private _velocity3: float;
     private _transition: boolean = false;
-    private _light1: Light;
     private _skyboxMaterial: SkyMaterial;
     private _gameScene: Scene;
     private _fightAmbianceMusic: Sound;
@@ -64,7 +63,6 @@ class App {
 
         var camera: ArcRotateCamera = new ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 2, 2, Vector3.Zero(), this._scene);
         camera.attachControl(this._canvas, true);
-        var light1: HemisphericLight = new HemisphericLight("light1", new Vector3(1, 1, 1), this._scene); //white light
         this.main();
     }
 
@@ -317,10 +315,6 @@ class App {
      * generate all meshes with glb map file
      */
     private async createMap(): Promise<void> {
-        var light1: HemisphericLight = new HemisphericLight("light1", new Vector3(0, 1, 0), this._scene); //white light
-        light1.intensity = 0.005;
-        light1.range = 100;
-        this._light1 = light1;
 
         this._horrorAmbianceMusic = new Sound("horror", "sounds/horror.mp3", this._scene, null, {
             loop: true,
@@ -439,6 +433,7 @@ class App {
         this._engine.loadingUIText = "\nChargement en cours... \nLe chargement peut prendre quelques minutes selon votre connexion internet.\n Merci de patienter.";
         this._engine.displayLoadingUI();
         await this.createMap();
+        this._fps.createLights();
         await this._scene.whenReadyAsync();
 
         //AFTER LOADING
@@ -448,6 +443,11 @@ class App {
         this._scene.attachControl();
         this._fps.openDoorAtStart();
         this._fps.deleteBug();
+        let options = new SceneOptimizerOptions(60, 2000);
+        let optimizer = new SceneOptimizer(this._scene, options);
+
+        optimizer.start();
+
         //this._fps.spawnGhost2();
         this._fps.spawnGhost1();
         this._fps.spawnboxTrigger1();
@@ -455,7 +455,7 @@ class App {
         this._fps.spawnboxTrigger12();
         this._fps.getMeshWeapons();
         this.disableEnemies();
-        this._round = new Round(this._scene, this._canvas, this._light1, this._skyboxMaterial, this._fightAmbianceMusic, this._horrorAmbianceMusic);
+        this._round = new Round(this._scene, this._canvas, this._skyboxMaterial, this._fightAmbianceMusic, this._horrorAmbianceMusic);
         this.day();
         this.update();
         const guiGame = AdvancedDynamicTexture.CreateFullscreenUI("UI");

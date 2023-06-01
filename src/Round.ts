@@ -9,10 +9,9 @@ export class Round{
     private _ambianceMusic: Sound;
     private _dayAmbianceMusic: Sound;
 
-    constructor(scene: Scene, canvas: HTMLCanvasElement, light1: Light, skyboxMaterial: SkyMaterial,ambianceMusic: Sound, dayAmbianceMusic:Sound ) {
+    constructor(scene: Scene, canvas: HTMLCanvasElement, skyboxMaterial: SkyMaterial,ambianceMusic: Sound, dayAmbianceMusic:Sound ) {
         this._scene = scene;
         this._canvas = canvas;
-        this._light1 = light1;
         this._skyboxMaterial = skyboxMaterial;
         this._ambianceMusic = ambianceMusic;
         this._dayAmbianceMusic = dayAmbianceMusic;
@@ -26,7 +25,6 @@ export class Round{
                 this._dayAmbianceMusic.play();
             }
             this._skyboxMaterial.luminance = 1;
-            this._light1.intensity = 0.05;
             this._skyboxMaterial.useSunPosition = true; // Do not set sun position from azimuth and inclination
             this._skyboxMaterial.sunPosition = new Vector3(0, 100, 0);
     }
@@ -40,7 +38,6 @@ export class Round{
             }
         
             this._skyboxMaterial.luminance = 0;
-            this._light1.intensity = 0.05;
             this._skyboxMaterial.useSunPosition = false;
     }
 }

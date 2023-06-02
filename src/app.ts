@@ -295,16 +295,7 @@ class App {
         this._scene.onReadyObservable.addOnce(() => {
             setInterval(() => {
                 console.log(Enemy.unleashEnemies)
-                if(FPSController._ammo >5){
-                    this.ammoIMG.isVisible = true;
-                    this.ammo2IMG.isVisible = false;
-                }
-                else {
-                    this.ammoIMG.isVisible = false;
-                    this.ammo2IMG.isVisible = true;
-                }
                 if (Enemy.unleashEnemies) {
-                    
                     if (Enemy.enemyRotation % 3 === 0 && this.cpt2 % 3 === 0 && this.cpt2 !== 9999) {
                         this._zombie.velocityChase = this._velocity;
                         this._zombie.maxHealth = this._zombie_Max_Health;

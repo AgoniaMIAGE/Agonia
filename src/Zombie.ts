@@ -6,7 +6,7 @@ import { Enemy } from "./Enemy";
 export class Zombie extends Enemy {
 
     public override async CreateEnemy(): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "https://agonia.fra1.digitaloceanspaces.com/", "monster1.glb", this.scene);
+        const result = await SceneLoader.ImportMeshAsync("", "./models/", "monster1.glb", this.scene);
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
         env.position = new Vector3(18.092, 0, 202.525);

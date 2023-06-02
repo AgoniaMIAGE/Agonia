@@ -1182,7 +1182,7 @@ export class FPSController {
 
 
     private async createWeapon1(): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "candle.glb", this._scene);
+        const result = await SceneLoader.ImportMeshAsync("", "https://agonia.fra1.digitaloceanspaces.com/", "candle.glb", this._scene);
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
         env.parent = this._camera;
@@ -1210,7 +1210,7 @@ export class FPSController {
     }
 
     private async createWeapon2(): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "flashlight.glb", this._scene);
+        const result = await SceneLoader.ImportMeshAsync("", "https://agonia.fra1.digitaloceanspaces.com/", "flashlight.glb", this._scene);
 
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
@@ -1227,7 +1227,7 @@ export class FPSController {
     }
 
     private async createweapon3(): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "lantern.glb", this._scene);
+        const result = await SceneLoader.ImportMeshAsync("", "https://agonia.fra1.digitaloceanspaces.com/", "lantern.glb", this._scene);
 
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
@@ -1245,7 +1245,7 @@ export class FPSController {
     }
 
     private async createweapon4(): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "pistol.glb", this._scene);
+        const result = await SceneLoader.ImportMeshAsync("", "https://agonia.fra1.digitaloceanspaces.com/", "pistol.glb", this._scene);
 
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
@@ -1263,7 +1263,7 @@ export class FPSController {
     }
 
     private async createweapon5(): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "rifle.glb", this._scene);
+        const result = await SceneLoader.ImportMeshAsync("", "https://agonia.fra1.digitaloceanspaces.com/", "rifle.glb", this._scene);
 
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
@@ -1281,7 +1281,7 @@ export class FPSController {
     }
 
     private async createweapon6(): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "seringue.glb", this._scene);
+        const result = await SceneLoader.ImportMeshAsync("", "https://agonia.fra1.digitaloceanspaces.com/", "seringue.glb", this._scene);
 
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
@@ -1878,7 +1878,7 @@ export class FPSController {
     }
 
     public async spawnGhost1() {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "ghost.glb", this._scene);
+        const result = await SceneLoader.ImportMeshAsync("", "https://agonia.fra1.digitaloceanspaces.com/", "ghost.glb", this._scene);
         this.ghostMesh1 = result.meshes[0];
         this.ghostMesh1.name = "ghost1";
         this.ghostMesh1.parent = this._scene.getMeshByName("Wall5X_WindowHole_CLR_primitive0");

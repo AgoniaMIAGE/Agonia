@@ -7,7 +7,7 @@ export class Mutant extends Enemy {
     public isSleeping: Boolean;
 
     public override async CreateEnemy(): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "monster2.glb", this.scene);
+        const result = await SceneLoader.ImportMeshAsync("", "https://agonia.fra1.digitaloceanspaces.com/", "monster2.glb", this.scene);
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
         env.position = new Vector3(26.519 , 0 , 182.086);

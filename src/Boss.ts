@@ -7,7 +7,7 @@ export class Boss extends Enemy {
     public isSleeping: Boolean;
     
     public override async CreateEnemy(): Promise<any> {
-        const result = await SceneLoader.ImportMeshAsync("", "./models/", "monster.glb", this.scene);
+        const result = await SceneLoader.ImportMeshAsync("", "https://agonia.fra1.digitaloceanspaces.com/", "monster.glb", this.scene);
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();
         env.position = new Vector3(44 , 0 , 174);

@@ -40,7 +40,7 @@ export class Zombie extends Enemy {
 
         // Make the hitbox invisible
         let hitboxMaterial = new StandardMaterial("hitboxMaterial", this.scene);
-        hitboxMaterial.alpha = 0.01;
+        hitboxMaterial.alpha = 0;
         hitbox.material = hitboxMaterial;
 
     }

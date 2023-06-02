@@ -1,4 +1,4 @@
-import { Animation, Tools, Observer, ConeParticleEmitter, CreateBox, RayHelper, PBRMaterial, EasingFunction, CannonJSPlugin, MeshBuilder, StandardMaterial, InstancedMesh, PointParticleEmitter, IAnimationKey, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
+import { Animation, Tools, Observer, ConeParticleEmitter, PhysicsImpostor, CreateBox, RayHelper, PBRMaterial, EasingFunction, CannonJSPlugin, MeshBuilder, StandardMaterial, InstancedMesh, PointParticleEmitter, IAnimationKey, FreeCameraKeyboardMoveInput, FreeCameraMouseInput, FreeCameraTouchInput, FreeCameraGamepadInput, Axis, PointLight, PBRMetallicRoughnessMaterial, SpotLight, DirectionalLight, OimoJSPlugin, PointerEventTypes, Space, Engine, SceneLoader, Scene, Vector3, Ray, TransformNode, Mesh, Color3, Color4, UniversalCamera, Quaternion, AnimationGroup, ExecuteCodeAction, ActionManager, ParticleSystem, Texture, SphereParticleEmitter, Sound, Observable, ShadowGenerator, FreeCamera, ArcRotateCamera, EnvironmentTextureTools, Vector4, AbstractMesh, KeyboardEventTypes, int, _TimeToken, CameraInputTypes, WindowsMotionController, Camera } from "@babylonjs/core";
 import { HemisphericLight, float } from "babylonjs";
 import { SolidParticle } from 'babylonjs/Particles/solidParticle';
 import { Boss } from "./Boss";
@@ -128,6 +128,7 @@ export class FPSController {
     private handRifle: boolean = false;
     private inventory1: Boolean = false;
     private inventory2: Boolean = false;
+    private inventory3: Boolean = false;
     private isMeleeWeapon: boolean = false;
     private canFire: boolean = false;
     private _candle: AbstractMesh;
@@ -580,6 +581,8 @@ export class FPSController {
 
         //define the camera as player (on his hitbox)
         this._camera.ellipsoid = new Vector3(0.7, 1, 0.7);
+        this._camera.ellipsoidOffset = new Vector3(0, -0.4, 0);
+
 
         //Movements
         this.InitCameraKeys();
@@ -609,6 +612,96 @@ export class FPSController {
         this._canvas.removeEventListener("click", () => {
             this._canvas.requestPointerLock();
         });
+    }
+
+    public correctHitbox(): void {
+        let walls = this._scene.getTransformNodeByName("Walls");
+        if (walls) {
+            walls.getChildren().forEach((childNode) => {
+                if (childNode instanceof TransformNode) {
+                    let meshes = childNode.getChildMeshes();
+                    if (meshes.length > 1) {
+                        meshes[0].checkCollisions = true;
+
+                        // List of mesh names to check for collision
+                        let collisionNames = ["Wall5X_DoorWay_CR.001_primitive0", "Wall_WindowHole (4)_primitive0",
+                            "Window.Down.007_primitive0", "Wall5X_CL.004_primitive0", "Wall5X_DoorWay_CL (3)_primitive0",
+                            "Wall5X_CR.003_primitive0", "OldDoor.001", "Wall_WindowHole (3)_primitive0", "Wall_WindowHole (2)_primitive0",
+                            "WallWindow (3)",
+                            "WallWindow (4)",
+                            "Wall_WindowHole (1).001",
+                            "WallWindow (6)",
+                            "Wall5X_WindowHole_CR (1)_primitive0",
+                            "Window.Down.008_primitive0",
+                            "Wall_WindowHole.001"];
+
+                        this._camera.onCollide = (collidedMesh) => {
+                            if (collisionNames.includes(collidedMesh.name)) {
+                                let direction = this._camera.getDirection(new Vector3(0, 0, 1));
+                                direction.negate();
+                                this._camera.position.addInPlace(direction.scale(0.1));
+                                console.log("collide with " + collidedMesh.name);
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    public hitboxCorrection(): void {
+        let collisionNames = [
+            "Wall5X_DoorWay_CR.001_primitive0",
+            "Wall_WindowHole (4)_primitive0",
+            "Window.Down.007_primitive0",
+            "Wall5X_CL.004_primitive0",
+            "Wall5X_DoorWay_CL (3)_primitive0",
+            "Wall5X_CR.003_primitive0",
+            "OldDoor.001",
+            "Wall_WindowHole (3)_primitive0",
+            "Wall_WindowHole (2)_primitive0",
+            "WallWindow (3)",
+            "WallWindow (4)"
+        ];
+
+        collisionNames.forEach(name => {
+            let mesh = this._scene.getMeshByName(name);
+            if (mesh) {
+                // Create an invisible wall by duplicating the existing mesh
+                let invisibleWall = mesh.clone("invisibleWall_", mesh.parent);
+                invisibleWall.isVisible = false;
+
+                // Move the invisible wall slightly along the Z axis
+                invisibleWall.position.z += 0.05;
+
+                invisibleWall.showBoundingBox = true;
+
+
+                // Create an imposter for the invisible wall (acting as a hitbox)
+                invisibleWall.physicsImpostor = new PhysicsImpostor(
+                    invisibleWall,
+                    PhysicsImpostor.BoxImpostor,
+                    { mass: 0, restitution: 0.9, friction: 0.5 },
+                    this._scene
+                );
+            }
+        });
+
+    }
+
+
+
+    public correctHitbox2(): void {
+        this._camera.onCollide = function (collidedMesh) {
+            // get the direction in which the camera is moving
+            let direction = this._camera.getDirection(new BABYLON.Vector3(0, 0, 1));
+
+            // reverse the direction
+            direction.negate();
+
+            // move the camera slightly in the opposite direction
+            this._camera.position.addInPlace(direction.scale(0.1));
+        }
     }
 
 
@@ -704,7 +797,7 @@ export class FPSController {
                             }
                             break;
                         case '"' || '3':
-                            if (this.inventory2) {
+                            if (this.inventory3) {
                                 this.allWeapons.forEach((weapon) => {
                                     weapon.setEnabled(false);
                                 });
@@ -890,7 +983,7 @@ export class FPSController {
 
     private positions = [
         new Vector3(7.401, 2.155, 199.327),
-        new Vector3(18.419, 2.582, 204.414),
+        //new Vector3(18.419, 2.582, 204.414),
         /*new Vector3(30.11, 3.33, 189.33),
         new Vector3(34.88, 3.28, 189.39),*/
         new Vector3(39.29, 2.48, 184.07),
@@ -1084,6 +1177,7 @@ export class FPSController {
         this._weapon = this.allWeapons[0];
         this.createFlareCandle(this.allWeapons[0]);
         this.createMuzzleFlash(this.allWeapons[4]);
+        this.createMuzzleFlash(this.allWeapons[3]);
     }
 
 
@@ -1240,6 +1334,9 @@ export class FPSController {
         this._weaponSound.play();
 
         this._heal.onAnimationGroupEndObservable.add(() => {
+            if(PlayerHealth._current_Health < PlayerHealth._max_Health){
+                PlayerHealth._current_Health = PlayerHealth._current_Health + 10;
+            }
             this.swap(this._weapon, lastWeapon);
         });
 
@@ -1602,6 +1699,13 @@ export class FPSController {
                                 this.enableCameraMovement();
                                 this.canBreakPlanks = true;
                             }
+                            if (this.examiningObjectMesh.name === "IC_Syringe") {
+                                this.examiningObjectMesh.setEnabled(false);
+                                this.examiningObject = false;
+                                this.inventory3 = true;
+                                this._canvas.focus();
+                                this.enableCameraMovement();
+                            }
                             else {
                                 if (this.examiningObjectMesh.name === "Radio") {
                                     this._radioSound.stop();
@@ -1636,6 +1740,8 @@ export class FPSController {
 
                         // Perform a raycast to check for intersections with objects in the scene
                         const pickInfo = this._scene.pickWithRay(ray);
+                        console.log(pickInfo.pickedMesh.name);
+
 
                         // Check if an object was picked
                         if (pickInfo.hit) {
@@ -2182,14 +2288,12 @@ export class FPSController {
         });
     }
 
+    private keyboardListener: ((event: KeyboardEvent) => void) | null = null;
 
     private createPuzzleGame(): void {
-        // Create a 2D advanced texture to hold the GUI controls
         let advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
         let isHUDVisible = true;
 
-
-        // Create a grid to hold the buttons
         let grid = new Grid();
         grid.width = "250px";
         grid.height = "220px";
@@ -2204,23 +2308,18 @@ export class FPSController {
         grid.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
         advancedTexture.addControl(grid);
 
-        // The code that the user needs to enter
         const correctCode = "3221";
-
-        // The code that the user has entered
         let enteredCode = "";
 
-        // TextBlock to display the entered code
         let codeDisplay = new TextBlock();
         codeDisplay.text = "";
-        codeDisplay.color = "white";  // Change color to white
-        codeDisplay.fontSize = 36;     // Increase font size to 36
+        codeDisplay.color = "white";
+        codeDisplay.fontSize = 36;
         codeDisplay.height = "40px";
         codeDisplay.width = "220px";
         codeDisplay.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         advancedTexture.addControl(codeDisplay);
 
-        // TextBlock pour afficher les messages
         let messageDisplay = new TextBlock();
         messageDisplay.text = "";
         messageDisplay.color = "white";
@@ -2231,8 +2330,6 @@ export class FPSController {
         messageDisplay.top = "-50px";
         advancedTexture.addControl(messageDisplay);
 
-
-        // Add buttons in a grid layout
         let buttonValues = [
             ['7', '8', '9'],
             ['4', '5', '6'],
@@ -2251,7 +2348,6 @@ export class FPSController {
                 button.paddingLeft = "10px";
                 button.paddingRight = "10px";
 
-                // Add an animation when a character is entered
                 var animation = new Animation("buttonClickAnimation", "scaleX", 60, Animation.ANIMATIONTYPE_FLOAT, Animation.ANIMATIONLOOPMODE_CYCLE);
                 var keys = [];
                 keys.push({ frame: 0, value: 1 });
@@ -2262,101 +2358,111 @@ export class FPSController {
                 button.animations.push(animation);
                 this._scene.beginAnimation(button, 0, 20, false);
 
-
-                button.onPointerUpObservable.add(() => {
-                    // If the button value is a digit, add it to the entered code
-                    if (buttonValues[i][j] >= '0' && buttonValues[i][j] <= '9') {
-                        enteredCode += buttonValues[i][j];
-                        codeDisplay.text = enteredCode;
-                        messageDisplay.text = "Entered number " + buttonValues[i][j];
-                    }
-
-                    // If the button value is 'Clear', remove the last digit from the entered code
-                    if (buttonValues[i][j] === 'Clear') {
-                        enteredCode = enteredCode.slice(0, -1);
-                        codeDisplay.text = enteredCode;
-                        messageDisplay.text = "Cleared last digit";
-                    }
-
-                    // Afficher les messages dans le TextBlock messageDisplay
-                    // If the button value is 'Enter', check if the entered code is correct
-                    if (buttonValues[i][j] === 'Enter') {
-                        if (enteredCode === correctCode) {
-                            messageDisplay.text = "Correct code entered!";
-                            this._doorunlockSound.play();
-                            // Déverrouiller la porte
-                            this.canOpenDoor3 = true;
-                            isHUDVisible = false; // Hide the HUD
-                            this.disableHUD(grid, codeDisplay, messageDisplay);
-                        } else {
-                            messageDisplay.text = "Incorrect code. Try again.";
-                        }
-                        // Réinitialiser le code entré
-                        enteredCode = "";
-                        codeDisplay.text = enteredCode;
-                    }
-                    if (buttonValues[i][j] === 'Z' || buttonValues[i][j] === 'Q' || buttonValues[i][j] === 'D' || buttonValues[i][j] === 'S') {
-                        isHUDVisible = false; // Hide the HUD
-                        this.disableHUD(grid, codeDisplay, messageDisplay);
-                    }
-                });
+                button.onPointerUpObservable.add(() => this.buttonClickHandler(buttonValues[i][j], grid, codeDisplay, messageDisplay));
                 grid.addControl(button, i, j);
             }
         }
 
-        // Add keydown event listener
-        window.addEventListener("keydown", (event) => {
-            // If the pressed key is a digit, add it to the entered code
-            if (event.key >= '0' && event.key <= '9') {
-                enteredCode += event.key;
-                codeDisplay.text = enteredCode;
-                console.log("Entered number " + event.key);
-            }
-
-            // If the pressed key is Backspace, remove the last digit from the entered code
-            if (event.key === 'Backspace') {
-                enteredCode = enteredCode.slice(0, -1);
-                codeDisplay.text = enteredCode;
-                console.log("Cleared last digit");
-            }
-
-            // If the pressed key is Escape, clear the entered code
-            if (event.key === 'Escape') {
-                enteredCode = "";
-                codeDisplay.text = enteredCode;
-                console.log("Code reset");
-            }
-
-            if (event.key === 'Enter') {
-                if (enteredCode === correctCode) {
-                    messageDisplay.text = "Correct code entered!";
-                    this._doorunlockSound.play();
-                    // Déverrouiller la porte
-                    this.canOpenDoor3 = true;
-                    isHUDVisible = false; // Hide the HUD
-                    this.disableHUD(grid, codeDisplay, messageDisplay);
-                } else {
-                    messageDisplay.text = "Incorrect code. Try again.";
-                }
-                // Réinitialiser le code entré
-                enteredCode = "";
-                codeDisplay.text = enteredCode;
-            }
-            if (event.key === 'Z' || event.key === 'Q' || event.key === 'D' || event.key === 'S') {
-                isHUDVisible = false; // Hide the HUD
-                this.disableHUD(grid, codeDisplay, messageDisplay);
-            }
-        });
+        if (isHUDVisible) {
+            this.attachKeyboardListener(grid, codeDisplay, messageDisplay);
+        }
     }
 
-    private disableHUD(grid: Grid, codeDisplay: TextBlock, messageDisplay: TextBlock) {
+    private buttonClickHandler(value: string, grid: Grid, codeDisplay: TextBlock, messageDisplay: TextBlock): void {
+        let enteredCode = codeDisplay.text;
+        const correctCode = "3221";
+
+        if (value >= '0' && value <= '9') {
+            enteredCode += value;
+            codeDisplay.text = enteredCode;
+            messageDisplay.text = "Entered number " + value;
+        }
+
+        if (value === 'Clear') {
+            enteredCode = enteredCode.slice(0, -1);
+            codeDisplay.text = enteredCode;
+            messageDisplay.text = "Cleared last digit";
+        }
+
+        if (value === 'Enter') {
+            if (enteredCode === correctCode) {
+                messageDisplay.text = "Correct code entered!";
+                this._doorunlockSound.play();
+                this.canOpenDoor3 = true;
+                this.disableHUD(grid, codeDisplay, messageDisplay);
+            } else {
+                messageDisplay.text = "Incorrect code. Try again.";
+            }
+            enteredCode = "";
+            codeDisplay.text = enteredCode;
+        }
+        if (value === 'z' || value === 'q' || value === 'd' || value === 's') {
+            this.disableHUD(grid, codeDisplay, messageDisplay);
+            console.log("test2");
+        }
+    }
+
+    private attachKeyboardListener(grid: Grid, codeDisplay: TextBlock, messageDisplay: TextBlock): void {
+        if (this.keyboardListener === null) {
+            this.keyboardListener = (event) => this.keydownHandler(event, grid, codeDisplay, messageDisplay);
+            window.addEventListener("keydown", this.keyboardListener);
+        }
+    }
+
+    private detachKeyboardListener(): void {
+        if (this.keyboardListener !== null) {
+            window.removeEventListener("keydown", this.keyboardListener);
+            this.keyboardListener = null;
+        }
+    }
+
+    private keydownHandler(event: KeyboardEvent, grid: Grid, codeDisplay: TextBlock, messageDisplay: TextBlock): void {
+        let enteredCode = codeDisplay.text;
+        const correctCode = "3221";
+
+        if (event.key >= '0' && event.key <= '9') {
+            enteredCode += event.key;
+            codeDisplay.text = enteredCode;
+        }
+
+        if (event.key === 'Backspace') {
+            enteredCode = enteredCode.slice(0, -1);
+            codeDisplay.text = enteredCode;
+        }
+
+        if (event.key === 'Escape') {
+            enteredCode = "";
+            codeDisplay.text = enteredCode;
+        }
+
+        if (event.key === 'Enter') {
+            if (enteredCode === correctCode) {
+                messageDisplay.text = "Correct code entered!";
+                this._doorunlockSound.play();
+                this.canOpenDoor3 = true;
+                this.disableHUD(grid, codeDisplay, messageDisplay);
+            } else {
+                messageDisplay.text = "Incorrect code. Try again.";
+            }
+            enteredCode = "";
+            codeDisplay.text = enteredCode;
+        }
+        if (event.key === 'z' || event.key === 'q' || event.key === 'd' || event.key === 's') {
+            this.disableHUD(grid, codeDisplay, messageDisplay);
+            console.log("test");
+        }
+    }
+
+    private disableHUD(grid: Grid, codeDisplay: TextBlock, messageDisplay: TextBlock): void {
         grid.isVisible = false;
         codeDisplay.isVisible = false;
         setTimeout(() => {
             messageDisplay.isVisible = false;
         }, 2000);
-
+        this.detachKeyboardListener();
     }
+
+
 
 
     private openOil() {

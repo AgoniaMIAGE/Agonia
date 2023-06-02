@@ -10,8 +10,9 @@ import { Enemy } from "./Enemy";
 import { Mutant } from "./Mutant";
 import { Boss } from "./Boss";
 import { Zombie } from "./Zombie";
-import { UtilityLayerRenderer, Engine, int, KeyboardEventTypes,SceneOptimizer,SceneOptimizerOptions, Tools, ArcRotateCamera, OimoJSPlugin, SpotLight, HemisphericLight, Scene, Animation, Vector3, Mesh, Color3, Color4, ShadowGenerator, GlowLayer, PointLight, FreeCamera, CubeTexture, Sound, PostProcess, Effect, SceneLoader, Matrix, MeshBuilder, Quaternion, AssetsManager, StandardMaterial, PBRMaterial, Material, float, Light } from "@babylonjs/core";
+import { UtilityLayerRenderer, Engine, int, KeyboardEventTypes, SceneOptimizer, SceneOptimizerOptions, Tools, ArcRotateCamera, OimoJSPlugin, SpotLight, HemisphericLight, Scene, Animation, Vector3, Mesh, Color3, Color4, ShadowGenerator, GlowLayer, PointLight, FreeCamera, CubeTexture, Sound, PostProcess, Effect, SceneLoader, Matrix, MeshBuilder, Quaternion, AssetsManager, StandardMaterial, PBRMaterial, Material, float, Light } from "@babylonjs/core";
 import { Round } from "./Round";
+
 //import { CustomLoadingUI } from "./CustomLoadingUi";
 
 
@@ -44,6 +45,8 @@ class App {
 
     //all weapons
     private _fps: FPSController;
+    private ammoIMG: Image;
+    private ammo2IMG: Image;
 
     //Zombies
     private _enemies: Array<Enemy>;
@@ -51,6 +54,12 @@ class App {
     private _zombie: Zombie;
     private _boss: Boss;
     private _mutant: Mutant;
+    private _zombie_Max_Health: number;
+    private _zombie_Damage: number;
+    private _mutant_Max_Health: number;
+    private _mutant_Damage: number;
+    private _boss_Max_Health: number;
+    private _boss_Damage: number;
 
     //Scene - related
     private _state: number = 0;
@@ -61,14 +70,15 @@ class App {
         this._engine = new Engine(this._canvas, true);
         this._scene = new Scene(this._engine);
 
+
         var camera: ArcRotateCamera = new ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 2, 2, Vector3.Zero(), this._scene);
         camera.attachControl(this._canvas, true);
         this.main();
     }
 
+
     private async main(): Promise<void> {
         await this.goToStart();
-
         // Register a render loop to repeatedly render the scene
         this._engine.runRenderLoop(() => {
             switch (this._state) {
@@ -178,19 +188,37 @@ class App {
         // Set difficulty based on currentDifficultyIndex
         if (this.currentDifficultyIndex === 0) { // Easy difficulty
             this._difficulty = 400;
-            this._velocity = 0.4;
-            this._velocity2 = 0.5;
-            this._velocity3 = 1;
+            this._velocity = 0.3;
+            this._zombie_Max_Health = 125;
+            this._zombie_Damage = 27;
+            this._velocity2 = 0.25;
+            this._mutant_Max_Health = 200;
+            this._mutant_Damage = 30;
+            this._velocity3 = 0.25;
+            this._boss_Max_Health = 350;
+            this._boss_Damage = 24;
         } else if (this.currentDifficultyIndex === 1) { // Experienced difficulty
             this._difficulty = 250;
-            this._velocity = 0.7;
-            this._velocity2 = 0.8;
-            this._velocity3 = 1.3;
+            this._velocity = 0.5;
+            this._zombie_Max_Health = 160;
+            this._zombie_Damage = 30;
+            this._velocity2 = 0.4;
+            this._mutant_Max_Health = 250;
+            this._mutant_Damage = 35;
+            this._velocity3 = 0.4;
+            this._boss_Max_Health = 425;
+            this._boss_Damage = 23;
         } else if (this.currentDifficultyIndex === 2) { // Terror difficulty
             this._difficulty = 100;
-            this._velocity = 1.1;
-            this._velocity2 = 1.2;
-            this._velocity3 = 1.5;
+            this._velocity = 0.7;
+            this._zombie_Max_Health = 225;
+            this._zombie_Damage = 35;
+            this._velocity2 = 0.5;
+            this._mutant_Max_Health = 325;
+            this._mutant_Damage = 42;
+            this._velocity3 = 0.5;
+            this._boss_Max_Health = 525;
+            this._boss_Damage = 28;
         }
 
         await scene.whenReadyAsync();
@@ -270,7 +298,9 @@ class App {
                 if (Enemy.unleashEnemies) {
 
                     if (Enemy.enemyRotation % 3 === 0 && this.cpt2 % 3 === 0 && this.cpt2 !== 9999) {
-                        this._zombie.velocity = 0.4;
+                        this._zombie.velocityChase = this._velocity;
+                        this._zombie.maxHealth = this._zombie_Max_Health;
+                        this._zombie.damage = this._zombie_Damage;
                         this._zombie.changePosition();
                         this._mutant.sleep();
                         this._boss.sleep();
@@ -278,36 +308,39 @@ class App {
                     }
 
                     else if (Enemy.enemyRotation % 3 === 1 && this.cpt2 % 3 === 1) {
-                        this._mutant.velocity = 0.2;
+                        this._mutant.velocityChase = this._velocity2;
+                        this._mutant.maxHealth = this._mutant_Max_Health;
+                        this._mutant.damage = this._mutant_Damage;
                         this._mutant.changePosition();
                         this._zombie.sleep();
                         this._boss.sleep();
                         this.cpt2++;
                     }
                     else if (Enemy.enemyRotation % 3 === 2 && this.cpt2 % 3 === 2) {
-                        this._boss.velocity = 0.2;
+                        this._boss.velocityChase = this._velocity3;
+                        this._boss.maxHealth = this._boss_Max_Health;
+                        this._boss.damage = this._boss_Damage;
                         this._boss.changePosition();
                         this._mutant.sleep();
                         this._zombie.sleep();
                         this.cpt2++;
                     }
 
-                }
+                    if (PlayerHealth._current_Health <= 0) {
+                        this._isdead = true;
+                        this._state = State.LOSE;
+                        this.goToLose();
+                    }
+                    if (Enemy.unleashEnemies && !this.nighted) {
+                        this.night();
+                        console.log("night");
+                        this.cpt2 = 0;
+                    }
+                    else {
+                        clearInterval(1);
+                    }
+                }}, 60);
 
-                if (PlayerHealth._current_Health <= 0) {
-                    this._isdead = true;
-                    this._state = State.LOSE;
-                    this.goToLose();
-                }
-                if (Enemy.unleashEnemies && !this.nighted) {
-                    this.night();
-                    console.log("night");
-                    this.cpt2 = 0;
-                }
-                else {
-                    clearInterval(1);
-                }
-            }, 60);
         })
     }
 
@@ -443,6 +476,7 @@ class App {
         this._scene.attachControl();
         this._fps.openDoorAtStart();
         this._fps.deleteBug();
+        this._fps.correctHitbox();
         let options = new SceneOptimizerOptions(60, 2000);
         let optimizer = new SceneOptimizer(this._scene, options);
 
@@ -475,65 +509,67 @@ class App {
         crossHairImg.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
         imageRect.addControl(crossHairImg);
 
-        //Ammo
-        const ammoImg = new Image("ammoImg", "/sprites/ammo.png");
-        ammoImg.width = "5%";
-        ammoImg.stretch = Image.STRETCH_UNIFORM;
-        ammoImg.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        ammoImg.paddingBottomInPixels = -45;
-        imageRect.addControl(ammoImg);
+        const ammoContainer = new Rectangle("ammoContainer");
+        ammoContainer.thickness = 0;
+        ammoContainer.width = "15%";
+        ammoContainer.height = "15%";
+        ammoContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        ammoContainer.paddingBottomInPixels = -45;
+        ammoContainer.left = "4.2px";
+
+        this.ammoIMG = new Image("ammoImg", "/sprites/HUD_Ammo_full.png");
+        this.ammoIMG.stretch = Image.STRETCH_UNIFORM;
+        this.ammoIMG.width = 1;  // Set this to 1 to fill the parent
+        this.ammoIMG.height = 1;  // Set this to 1 to fill the parent
+
+        this.ammo2IMG = new Image("ammoImg2", "/sprites/HUD_Ammo_Empty.png");
+        this.ammo2IMG.stretch = Image.STRETCH_UNIFORM;
+        this.ammo2IMG.width = 1;  // Set this to 1 to fill the parent
+        this.ammo2IMG.height = 1;  // Set this to 1 to fill the parent
+
+        ammoContainer.addControl(this.ammoIMG);
+        ammoContainer.addControl(this.ammo2IMG);
 
         //Ammo amount / Ammo max
         const ammoNb = new TextBlock("ammoNb", "" + FPSController._ammo);
         ammoNb.resizeToFit = true;
-        ammoNb.fontFamily = "Calibri";
-        ammoNb.fontSize = "3px";
-        ammoNb.color = "white";
+        ammoNb.fontFamily = "Strasse";
+        var fontSizePercentage = 0.15 / 100;
+        ammoNb.fontSize = (window.innerHeight + window.innerWidth) / 2 * fontSizePercentage;
+        ammoNb.color = "black";
         ammoNb.resizeToFit = true;
-        ammoNb.width = 0.8;
-        ammoNb.paddingBottomInPixels = -45;
-        ammoNb.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        ammoNb.paddingLeftInPixels = 4;
-        imageRect.addControl(ammoNb);
+        ammoNb.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;  // Set alignment to center
+        ammoNb.paddingLeftInPixels = 3;
+
+        ammoContainer.addControl(ammoNb);
+        imageRect.addControl(ammoContainer);
         //healthBar Management
-        var hbImg = new Image("healthbar", "/sprites/healthbar.png");
-        var hbImgGrey = new Image("healthbargrey", "/sprites/healthbar.png");
+        //healthBar Management
+        var hbImg = new Image("healthbar", "/sprites/HUD_Healthbar.png");
+        var hbImgRed = new Image("healthbarred", "/sprites/HUD_Healthbar_Red.png");
+        hbImgRed.color = "red";
+        hbImgRed.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT; // Align to right
+
         var container = new Rectangle("container");
         container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        // container.paddingBottomInPixels = -10;
-        container.top = "21%";
-        container.height = "10%";
-        container.width = "10%";
-        //container.top = "-4%";
+        container.top = "35%";
+        container.height = "16%";
+        container.width = "25%";
+        container.paddingBottom="3px";
         container.thickness = 0;
         container.alpha = 0.2;
-        container.addControl(hbImgGrey)
-        var container2 = new Rectangle("container2");
-        container2.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        //container2.paddingBottomInPixels = -10;
-        container2.top = "35%";
-        container2.height = "10%";
-        container2.width = "10%";
-        //.top = "-4%";
-        container2.thickness = 0;
-        container2.background = "";
-        container2.addControl(hbImg);
+        container.addControl(hbImg); // Add background first
+        container.addControl(hbImgRed); // Add red health bar second so it's on top
 
         guiGame.addControl(container);
-        guiGame.addControl(container2);
 
         var right = 0;
-        var cRight = 180;
         this._scene.onAfterRenderObservable.add(function () {
-            hbImg.paddingRight = right;
-            container.paddingRight = cRight;
-            hbImg.isDirty;
-            container.isDirty;
-            right = PlayerHealth._current_Health - 200;
-            cRight = 180 + (PlayerHealth._current_Health * (PlayerHealth._current_Health - 200)) / (-PlayerHealth._current_Health);
-            //above is the update of the healthBar, bellow the update of the ammo amount
+            // Update the width of the red health bar
+            hbImgRed.width = PlayerHealth._current_Health / PlayerHealth._max_Health;
+
             ammoNb.text = "";
-            //ammoNb.text = "   " + FPSController._ammo.toString() + "/" + FPSController._max_ammo;
+            ammoNb.text = "   " + FPSController._ammo + "/" + FPSController._max_ammo;
         })
     }
 

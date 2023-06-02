@@ -20,6 +20,7 @@ enum EnemyState {
 export class Enemy {
 
   public velocity: float;
+  public velocityChase: float;
   public isDead: Boolean;
   protected isAttacking: Boolean;
   protected _isScreaming: Boolean;
@@ -42,7 +43,7 @@ export class Enemy {
   public currentHealth: float;
   public maxHealth: float;
   public damage: float;
-  public isGetHit: boolean;
+  public isGetHit: boolean = false;
   public diee: boolean = false;
 
   // animation trackers
@@ -220,7 +221,7 @@ export class Enemy {
         else {
           this.cooldownTimeStun = 0;
         }
-        if (!this.isDead && !this.isSleeping && !this.isAttacking && !this._isScreaming) {
+        if (!this.isDead && !this.isSleeping && !this.isAttacking && !this._isScreaming && !this.isGetHit) {
           this.chase(this.velocity);
         }
         if ((this.diee) && (this.targetMesh.visibility <= 1 && this.targetMesh.visibility > 0)) {
@@ -240,7 +241,6 @@ export class Enemy {
   public async getHit(damage: float) {
     this.isGetHit = true;
     var velocity2 = this.velocity;
-
     this.velocity = 0;
     this.changeState(EnemyState.Hit);
     this.currentHealth -= damage;
@@ -248,6 +248,7 @@ export class Enemy {
       this.die();
     }
     this._hit.onAnimationEndObservable.addOnce(() => {
+      
       this.velocity = velocity2;
       this.isGetHit = false;
     });
@@ -283,30 +284,28 @@ export class Enemy {
       let targetVecNorm = Vector3.Normalize(targetVec);
       if (distVec <= 4) {
         velocity = 0;
-        if (this.stunCooldown <= this.cooldownTimeStun / 60) {
-          this.stunPlayer();
-          this.cooldownTimeStun = 0;
-          this.cooldownTimeAttack = 0;
-        }
-        else if (this.attackCooldown <= this.cooldownTimeAttack / 60) {
+        if (this.attackCooldown <= this.cooldownTimeAttack / 60) {
           this.isAttacking = true;
           this.attack();
           this.cooldownTimeAttack = 0;
         }
-        else {
+        else if (this.stunCooldown <= this.cooldownTimeStun / 60) {
+          this.stunPlayer();
+          this.cooldownTimeStun = 0;
+          this.cooldownTimeAttack = 0;
+        }
+        else if(!this.isGetHit){
           this.changeState(EnemyState.Idle);
         }
       }
       else {
+        this.velocity = this.velocityChase;
         zombie.translate(new Vector3(targetVecNorm._x, 0, targetVecNorm._z,), velocity, Space.WORLD);
         if (velocity >= 0.8) {
           this.changeState(EnemyState.Run);
         }
         else if (velocity >= 0.05 && velocity < 0.8) {
           this.changeState(EnemyState.Walk);
-        }
-        else {
-          this.changeState(EnemyState.Idle);
         }
       }
       distVec -= velocity;

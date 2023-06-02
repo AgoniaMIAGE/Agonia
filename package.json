@@ -29,6 +29,7 @@
     "webpack-dev-server": "^4.15.0"
   },
   "dependencies": {
+    "@babylonjs/havok": "^1.0.1",
     "@babylonjs/loaders": "^6.5.0",
     "@babylonjs/viewer": "^6.4.1",
     "babylonjs": "^6.4.1",

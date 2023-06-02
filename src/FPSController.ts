@@ -219,7 +219,7 @@ export class FPSController {
         });
         //this._empty_ammo = new Sound("emptyammo", "sounds/emptyammo.mp3", this._scene);
         this._playerHealth = new PlayerHealth(this._scene, this._weapon, 200);
-        //this._reloadSound = new Sound("pistolsoundreload", "sounds/pistol-reload.mp3", this._scene);
+        this._reloadSound = new Sound("pistolsoundreload", "sounds/pistol-reload.mp3", this._scene);
         this._openDoorSound = new Sound("dooropen", "sounds/dooropen.mp3", this._scene);
         this._keySound = new Sound("key", "sounds/key.mp3", this._scene);
         this._doorunlockSound = new Sound("doorunlock", "sounds/doorunlock.mp3", this._scene);
@@ -981,9 +981,6 @@ export class FPSController {
 
     private positions = [
         new Vector3(7.401, 2.155, 199.327),
-        //new Vector3(18.419, 2.582, 204.414),
-        /*new Vector3(30.11, 3.33, 189.33),
-        new Vector3(34.88, 3.28, 189.39),*/
         new Vector3(39.29, 2.48, 184.07),
     ];
 
@@ -1132,7 +1129,7 @@ export class FPSController {
 
         // We start the reload animation
         this.changeState(CharacterState.Reload);
-
+        
         // Add an observer for the end of the animation.
         this._reload.onAnimationEndObservable.addOnce(() => {
             // This code will run once the reload animation has finished
@@ -1517,8 +1514,6 @@ export class FPSController {
 
         //audio effect 
         this._weaponSound = new Sound("attack", "sounds/snipershot.mp3", this._scene);
-        this._reloadSound = new Sound("snipersoundreload", "sounds/sniper-reload.mp3", this._scene);
-
     }
 
     private changeState(newState: CharacterState) {

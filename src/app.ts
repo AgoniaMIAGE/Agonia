@@ -376,7 +376,7 @@ class App {
         skyboxMaterial.useSunPosition = false; // Do not set sun position from azimuth and inclination
         skyboxMaterial.sunPosition = new Vector3(0, 100, 0);
 
-        const result = await SceneLoader.ImportMeshAsync("", "https://agonia.fra1.digitaloceanspaces.com/SampleScene.glb", "SampleScene.glb", this._scene);
+        const result = await SceneLoader.ImportMeshAsync("", "https://agonia.fra1.digitaloceanspaces.com/", "SampleScene.glb", this._scene);
 
         let env = result.meshes[0];
         let allMeshes = env.getChildMeshes();

@@ -190,35 +190,35 @@ class App {
             this._difficulty = 400;
             this._velocity = 0.4;
             this._zombie_Max_Health = 125;
-            this._zombie_Damage = 27;
+            this._zombie_Damage = 20;
             this._velocity2 = 0.35;
             this._mutant_Max_Health = 200;
-            this._mutant_Damage = 30;
+            this._mutant_Damage = 25;
             this._velocity3 = 0.35;
             this._boss_Max_Health = 350;
-            this._boss_Damage = 24;
+            this._boss_Damage = 22;
         } else if (this.currentDifficultyIndex === 1) { // Experienced difficulty
             this._difficulty = 250;
             this._velocity = 0.7;
             this._zombie_Max_Health = 160;
-            this._zombie_Damage = 30;
+            this._zombie_Damage = 50;
             this._velocity2 = 0.55;
             this._mutant_Max_Health = 250;
-            this._mutant_Damage = 35;
+            this._mutant_Damage = 55;
             this._velocity3 = 0.55;
             this._boss_Max_Health = 425;
-            this._boss_Damage = 23;
+            this._boss_Damage = 45;
         } else if (this.currentDifficultyIndex === 2) { // Terror difficulty
             this._difficulty = 100;
             this._velocity = 1;
             this._zombie_Max_Health = 225;
-            this._zombie_Damage = 35;
+            this._zombie_Damage = 80;
             this._velocity2 = 0.8;
             this._mutant_Max_Health = 325;
-            this._mutant_Damage = 42;
+            this._mutant_Damage = 120;
             this._velocity3 = 0.8;
             this._boss_Max_Health = 525;
-            this._boss_Damage = 28;
+            this._boss_Damage = 70;
         }
 
         await scene.whenReadyAsync();
@@ -294,7 +294,6 @@ class App {
     private update() {
         this._scene.onReadyObservable.addOnce(() => {
             setInterval(() => {
-                console.log(Enemy.unleashEnemies)
                 if (Enemy.unleashEnemies) {
                     if (Enemy.enemyRotation % 3 === 0 && this.cpt2 % 3 === 0 && this.cpt2 !== 9999) {
                         this._zombie.velocityChase = this._velocity;
@@ -341,7 +340,6 @@ class App {
                 }
                 if (Enemy.unleashEnemies && !this.nighted) {
                     this.night();
-                    console.log("night");
                     this.cpt2 = 0;
                 }
                 else {
@@ -479,7 +477,7 @@ class App {
 
         //AFTER LOADING
         this._engine.hideLoadingUI();
-        this._scene.debugLayer.show();
+        //this._scene.debugLayer.show();
         this._fps.diableCarpet();
         this._scene.attachControl();
         this._fps.openDoorAtStart();
@@ -517,7 +515,7 @@ class App {
         crossHairImg.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
         imageRect.addControl(crossHairImg);
 
-        const ammoContainer = new Rectangle("ammoContainer");
+        /*const ammoContainer = new Rectangle("ammoContainer");
         ammoContainer.thickness = 0;
         ammoContainer.width = "6%";
         ammoContainer.height = "5%";
@@ -577,7 +575,7 @@ class App {
 
             ammoNb.text = "";
             ammoNb.text = "   " + FPSController._ammo + "/" + FPSController._max_ammo;
-        })
+        })*/
     }
 
     /**

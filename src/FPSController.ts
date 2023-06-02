@@ -640,7 +640,6 @@ export class FPSController {
                                 let direction = this._camera.getDirection(new Vector3(0, 0, 1));
                                 direction.negate();
                                 this._camera.position.addInPlace(direction.scale(0.1));
-                                console.log("collide with " + collidedMesh.name);
                             }
                         }
                     }
@@ -806,7 +805,6 @@ export class FPSController {
 
                             break;
                         case 'f':
-                            console.log(this._weapon.getChildMeshes()[0]?.name);
                             if (this._weapon.getChildMeshes()[0]?.name === "Flashlight2_Body") {
                                 if (this.lanternLight.isEnabled()) {
                                     this.lantern(false);
@@ -856,7 +854,6 @@ export class FPSController {
             }
             switch (pointerInfo.type) {
                 case PointerEventTypes.POINTERDOWN:
-                    console.log("click");
                     if (pointerInfo.event.button === 0 && this.canFire) {
                         this.fire();
                         if (this.rightClickPressed) {
@@ -1046,10 +1043,8 @@ export class FPSController {
                     this.muzzleFlash();
 
                     var hit = this._scene.pickWithRay(ray);
-                    console.log("1", hit.pickedMesh.name);
                     this.changeState(CharacterState.AimShot);
                     for (let i = 0; i < this._zMeshes.length; i++) {
-                        console.log(hit.pickedMesh.name);
                         if (hit.pickedMesh.name == this._zMeshes[i]) {
                             switch (this._zMeshes[i]) {
                                 case "hitboxB":
@@ -1090,7 +1085,6 @@ export class FPSController {
                     this.muzzleFlash();
 
                     for (let i = 0; i < this._zMeshes.length; i++) {
-                        console.log(hit.pickedMesh.name);
                         if (hit.pickedMesh.name == this._zMeshes[i]) {
                             switch (this._zMeshes[i]) {
                                 case "hitboxB":
@@ -1310,9 +1304,6 @@ export class FPSController {
         else {
             lastWeapon = "pistol";
         }
-        console.log(lastWeapon);
-        console.log(this.handPistol);
-        console.log(this.handRifle);
         this.isMeleeWeapon = false;
         this.canFire = false;
 
@@ -1621,7 +1612,6 @@ export class FPSController {
                         this._canvas.removeEventListener("mousemove", this.mouseMoveListener);
                         this.mouseMoveListener = null;
                         if (this.examiningObject) {
-                            console.log("examining object naeme :", this.examiningObjectMesh.name);
                             if (this.examiningObjectMesh.name === "IA_Lantern_primitive0") {
                                 this.examiningObjectMesh.setEnabled(false);
                                 this.swap(this._weapon, "lantern");
@@ -1740,12 +1730,10 @@ export class FPSController {
 
                         // Perform a raycast to check for intersections with objects in the scene
                         const pickInfo = this._scene.pickWithRay(ray);
-                        console.log(pickInfo.pickedMesh.name);
 
 
                         // Check if an object was picked
                         if (pickInfo.hit) {
-                            console.log(pickInfo.pickedMesh);
                             // Check if an object was picked and if it can be examined
                             if (pickInfo && pickInfo.hit && this.canExamineObject(pickInfo.pickedMesh)) {
                                 const pickedObject = pickInfo.pickedMesh;
@@ -1773,7 +1761,6 @@ export class FPSController {
                             if (pickInfo && pickInfo.hit && this.canExamineDrawer(pickInfo.pickedMesh)) {
                                 if (!pickInfo.pickedMesh.name.includes("ChestOfDrawers_mesh") && !pickInfo.pickedMesh.name.includes("ChestOfDrawers_mesh.001") && !pickInfo.pickedMesh.name.includes("ChestOfDrawers_mesh.002")) {
                                     const pickedObject = pickInfo.pickedMesh;
-                                    console.log(pickedObject.name);
                                     if (this.isOpen) {
                                         this.closeChestOfDrawers(pickedObject);
                                         if (pickedObject.name === "Drawer1") {
@@ -1841,7 +1828,6 @@ export class FPSController {
                                 this._plankBreak.play();
                                 this.planksCpt--;
                                 if (this.planksCpt < 1) {
-                                    console.log("no planks left");
                                 }
                             }
                             if (this.ar15names.includes(pickInfo.pickedMesh.name)) {
@@ -1882,11 +1868,9 @@ export class FPSController {
         this.ghostMesh1 = result.meshes[0];
         this.ghostMesh1.name = "ghost1";
         this.ghostMesh1.parent = this._scene.getMeshByName("Wall5X_WindowHole_CLR_primitive0");
-        console.log(this.ghostMesh1.rotation.y);
         result.meshes[0].position = new Vector3(-0.5, 2.5, -2);
         result.meshes[0].rotation = new Vector3(0, 0.52, 1.57);
         result.meshes[0].scaling = new Vector3(1.1, 1.2, -1);
-        console.log(this.ghostMesh1.rotation.y);
         this.ghostScareAnimation1 = this._scene.getAnimationGroupByName("Weeper_DEMO.Cast02end");
         this.ghostCast01Animation = this._scene.getAnimationGroupByName("Weeper_DEMO.Cast01");
         this.ghostCast02Animation = this._scene.getAnimationGroupByName("Weeper_DEMO.Cast02start");
@@ -2398,7 +2382,6 @@ export class FPSController {
         }
         if (value === 'z' || value === 'q' || value === 'd' || value === 's') {
             this.disableHUD(grid, codeDisplay, messageDisplay);
-            console.log("test2");
         }
     }
 
@@ -2449,7 +2432,6 @@ export class FPSController {
         }
         if (event.key === 'z' || event.key === 'q' || event.key === 'd' || event.key === 's') {
             this.disableHUD(grid, codeDisplay, messageDisplay);
-            console.log("test");
         }
     }
 
@@ -2469,7 +2451,6 @@ export class FPSController {
         const object = this._scene.getMeshByName("IC_OilBottle");
         const animationDuration = 40; // Durée de l'animation en millisecondes
         const initialZ = 200.746337890625; // Position initiale de l'objet
-        console.log(initialZ);
         const targetZ = 201.246337890625; // Position finale de l'ouverture du tiroir
         this.animationPosition(object, initialZ, targetZ, animationDuration, false, false);
     }
@@ -2478,7 +2459,6 @@ export class FPSController {
         const object = this._scene.getMeshByName("IC_OilBottle");
         const animationDuration = 40; // Durée de l'animation en millisecondes
         const initialZ = 201.246337890625; // Position initiale de l'objet
-        console.log(initialZ);
         const targetZ = 200.746337890625; // Position finale de l'ouverture du tiroir
 
         this.animationPosition(object, initialZ, targetZ, animationDuration, false, false);

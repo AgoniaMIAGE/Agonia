@@ -13,13 +13,9 @@ export class Mutant extends Enemy {
         env.position = new Vector3(26.519 , 0 , 182.086);
         env.scaling = new Vector3(1.5, 1.5, -1.5);
         env.name = this.name;
-        this.maxHealth = 130;
-        this.damage = 26;
         this.currentHealth = this.maxHealth;
         this.zombieMeshes = env;
         this.targetMesh = this.scene.getMeshByName("Creature_03_Mesh");
-        this.maxHealth = 300;
-        this.damage = 26;
 
         //Animations
         this._attack = this.scene.getAnimationGroupByName("Monster_03.Sit_Attack_2");
@@ -41,9 +37,7 @@ export class Mutant extends Enemy {
 
         // Make the hitbox invisible
         let hitboxMaterial = new StandardMaterial("hitboxMaterial", this.scene);
-        hitboxMaterial.alpha = 0.01;
+        hitboxMaterial.alpha = 0.00;
         hitbox.material = hitboxMaterial;
-
     }
-
 }

@@ -13,13 +13,9 @@ export class Boss extends Enemy {
         env.position = new Vector3(44 , 0 , 174);
         env.scaling = new Vector3(1.7, 1.7, -1.7);
         env.name = this.name;
-        this.maxHealth = 110;
-        this.damage = 40;
         this.currentHealth = this.maxHealth;
         this.zombieMeshes = env;
         this.targetMesh = this.scene.getMeshByName("Monster_01_Mesh");
-        this.maxHealth = 300;
-        this.damage = 26;
 
         //Animations
         this._attack = this.scene.getAnimationGroupByName("Monster_01.Sit_Attack_2");
@@ -41,7 +37,7 @@ export class Boss extends Enemy {
 
         // Make the hitbox invisible
         let hitboxMaterial = new StandardMaterial("hitboxMaterial", this.scene);
-        hitboxMaterial.alpha = 0.01;
+        hitboxMaterial.alpha = 0;
         hitbox.material = hitboxMaterial;
 
 

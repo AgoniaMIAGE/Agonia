@@ -12,13 +12,9 @@ export class Zombie extends Enemy {
         env.position = new Vector3(18.092, 0, 202.525);
         env.scaling = new Vector3(1, 1, -1);
         env.name = this.name;
-        this.maxHealth = 70;
-        this.damage = 5;
         this.currentHealth = this.maxHealth;
         this.zombieMeshes = env;
         this.targetMesh = this.scene.getMeshByName("Monster_04_MEsh");
-        this.maxHealth = 150;
-        this.damage = 20;
         //Animations
         this._attack = this.scene.getAnimationGroupByName("Monster_04.Sit_Attack_6");
         this._fallingBack = this.scene.getAnimationGroupByName("Monster_04.Sit_Dead_1");

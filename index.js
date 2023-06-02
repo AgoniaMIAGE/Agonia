@@ -1,33 +1,15 @@
-const path = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
+let express = require('express');
+let app = express();
 
-module.exports = {
-  entry: './src/app.ts',
-  output: {
-    filename: 'bundle.js',
-    path: path.resolve(__dirname, 'dist')
-  },
-  resolve: {
-    extensions: ['.ts', '.js'],
-  },
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        use: 'ts-loader',
-        exclude: /node_modules/,
-      },
-    ],
-  },
-  plugins: [
-    new HtmlWebpackPlugin({
-      template: './public/index.html',
-      filename: 'index.html'
-    }),
-  ],
-  devServer: {
-    contentBase: path.join(__dirname, 'dist'),
-    compress: true,
-    port: 8000
-  }
-};
+app.use("/", express.static(__dirname));
+
+app.get("/", function(req, res) {
+    res.sendFile(__dirname + "/dist/index.html");
+});
+
+// necessary for heroku, as heroku will position the PORT environment variable
+let port = process.env.PORT || 8000;
+
+app.listen(port, () => {
+    console.log("Server is running on port " + port);
+})

@@ -294,7 +294,17 @@ class App {
     private update() {
         this._scene.onReadyObservable.addOnce(() => {
             setInterval(() => {
+                console.log(Enemy.unleashEnemies)
+                if(FPSController._ammo >5){
+                    this.ammoIMG.isVisible = true;
+                    this.ammo2IMG.isVisible = false;
+                }
+                else {
+                    this.ammoIMG.isVisible = false;
+                    this.ammo2IMG.isVisible = true;
+                }
                 if (Enemy.unleashEnemies) {
+                    
                     if (Enemy.enemyRotation % 3 === 0 && this.cpt2 % 3 === 0 && this.cpt2 !== 9999) {
                         this._zombie.velocityChase = this._velocity;
                         this._zombie.maxHealth = this._zombie_Max_Health;
@@ -323,29 +333,21 @@ class App {
                         this._zombie.sleep();
                         this.cpt2++;
                     }
-                }
-                if (FPSController._ammo > 2) {
-                    this.ammoIMG.isVisible = true;
-                    this.ammo2IMG.isVisible = false;
-                }
-                else {
-                    this.ammoIMG.isVisible = false;
-                    this.ammo2IMG.isVisible = true;
-                }
-                if (PlayerHealth._current_Health <= 0) {
-                    location.reload(); // Rafraîchir la page
-                    this._isdead = true;
-                    this._state = State.LOSE;
-                    this.goToLose();
-                }
-                if (Enemy.unleashEnemies && !this.nighted) {
-                    this.night();
-                    this.cpt2 = 0;
-                }
-                else {
-                    clearInterval(1);
-                }
-            }, 60);
+
+                    if (PlayerHealth._current_Health <= 0) {
+                        this._isdead = true;
+                        this._state = State.LOSE;
+                        this.goToLose();
+                    }
+                    if (Enemy.unleashEnemies && !this.nighted) {
+                        this.night();
+                        console.log("night");
+                        this.cpt2 = 0;
+                    }
+                    else {
+                        clearInterval(1);
+                    }
+                }}, 60);
 
         })
     }

@@ -754,6 +754,7 @@ export class FPSController {
                 break;
             case "seringue":
                 this.createSeringue();
+                Enemy.unleashEnemies = true;
         }
     }
 

@@ -1,7 +1,7 @@
 {
-  "name": "statera",
+  "name": "Agonia",
   "version": "1.0.0",
-  "description": "Games on web 2022",
+  "description": "Games on web 2023",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ProjetStatera/StateraFPS.git"
+    "url": "https://github.com/AgoniaMIAGE/Agonia"
   },
   "author": "Adem BEN JABRIA, Valentin CHARLES",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/ProjetStatera/StateraFPS/issues"
+    "url": "https://github.com/AgoniaMIAGE/Agonia/issues"
   },
-  "homepage": "https://github.com/ProjetStatera/StateraFPS#readme",
+  "homepage": "https://github.com/AgoniaMIAGE/Agonia#readme",
   "devDependencies": {
     "@babylonjs/core": "^6.4.1",
     "@babylonjs/inspector": "^6.4.1",

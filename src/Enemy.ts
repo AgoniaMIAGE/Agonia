@@ -301,10 +301,10 @@ export class Enemy {
       else {
         this.velocity = this.velocityChase;
         zombie.translate(new Vector3(targetVecNorm._x, 0, targetVecNorm._z,), velocity, Space.WORLD);
-        if (velocity >= 0.8) {
+        if (velocity >= 0.55) {
           this.changeState(EnemyState.Run);
         }
-        else if (velocity >= 0.05 && velocity < 0.8) {
+        else if (velocity >= 0.05 && velocity < 0.55) {
           this.changeState(EnemyState.Walk);
         }
       }

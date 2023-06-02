@@ -188,35 +188,35 @@ class App {
         // Set difficulty based on currentDifficultyIndex
         if (this.currentDifficultyIndex === 0) { // Easy difficulty
             this._difficulty = 400;
-            this._velocity = 0.3;
+            this._velocity = 0.4;
             this._zombie_Max_Health = 125;
             this._zombie_Damage = 27;
-            this._velocity2 = 0.25;
+            this._velocity2 = 0.35;
             this._mutant_Max_Health = 200;
             this._mutant_Damage = 30;
-            this._velocity3 = 0.25;
+            this._velocity3 = 0.35;
             this._boss_Max_Health = 350;
             this._boss_Damage = 24;
         } else if (this.currentDifficultyIndex === 1) { // Experienced difficulty
             this._difficulty = 250;
-            this._velocity = 0.5;
+            this._velocity = 0.7;
             this._zombie_Max_Health = 160;
             this._zombie_Damage = 30;
-            this._velocity2 = 0.4;
+            this._velocity2 = 0.55;
             this._mutant_Max_Health = 250;
             this._mutant_Damage = 35;
-            this._velocity3 = 0.4;
+            this._velocity3 = 0.55;
             this._boss_Max_Health = 425;
             this._boss_Damage = 23;
         } else if (this.currentDifficultyIndex === 2) { // Terror difficulty
             this._difficulty = 100;
-            this._velocity = 0.7;
+            this._velocity = 1;
             this._zombie_Max_Health = 225;
             this._zombie_Damage = 35;
-            this._velocity2 = 0.5;
+            this._velocity2 = 0.8;
             this._mutant_Max_Health = 325;
             this._mutant_Damage = 42;
-            this._velocity3 = 0.5;
+            this._velocity3 = 0.8;
             this._boss_Max_Health = 525;
             this._boss_Damage = 28;
         }
@@ -296,7 +296,6 @@ class App {
             setInterval(() => {
                 console.log(Enemy.unleashEnemies)
                 if (Enemy.unleashEnemies) {
-
                     if (Enemy.enemyRotation % 3 === 0 && this.cpt2 % 3 === 0 && this.cpt2 !== 9999) {
                         this._zombie.velocityChase = this._velocity;
                         this._zombie.maxHealth = this._zombie_Max_Health;
@@ -325,21 +324,30 @@ class App {
                         this._zombie.sleep();
                         this.cpt2++;
                     }
-
-                    if (PlayerHealth._current_Health <= 0) {
-                        this._isdead = true;
-                        this._state = State.LOSE;
-                        this.goToLose();
-                    }
-                    if (Enemy.unleashEnemies && !this.nighted) {
-                        this.night();
-                        console.log("night");
-                        this.cpt2 = 0;
-                    }
-                    else {
-                        clearInterval(1);
-                    }
-                }}, 60);
+                }
+                if (FPSController._ammo > 2) {
+                    this.ammoIMG.isVisible = true;
+                    this.ammo2IMG.isVisible = false;
+                }
+                else {
+                    this.ammoIMG.isVisible = false;
+                    this.ammo2IMG.isVisible = true;
+                }
+                if (PlayerHealth._current_Health <= 0) {
+                    location.reload(); // Rafraîchir la page
+                    this._isdead = true;
+                    this._state = State.LOSE;
+                    this.goToLose();
+                }
+                if (Enemy.unleashEnemies && !this.nighted) {
+                    this.night();
+                    console.log("night");
+                    this.cpt2 = 0;
+                }
+                else {
+                    clearInterval(1);
+                }
+            }, 60);
 
         })
     }
@@ -511,11 +519,11 @@ class App {
 
         const ammoContainer = new Rectangle("ammoContainer");
         ammoContainer.thickness = 0;
-        ammoContainer.width = "15%";
-        ammoContainer.height = "15%";
+        ammoContainer.width = "6%";
+        ammoContainer.height = "5%";
         ammoContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        ammoContainer.top = "-42px";
         ammoContainer.paddingBottomInPixels = -45;
-        ammoContainer.left = "4.2px";
 
         this.ammoIMG = new Image("ammoImg", "/sprites/HUD_Ammo_full.png");
         this.ammoIMG.stretch = Image.STRETCH_UNIFORM;
@@ -534,12 +542,12 @@ class App {
         const ammoNb = new TextBlock("ammoNb", "" + FPSController._ammo);
         ammoNb.resizeToFit = true;
         ammoNb.fontFamily = "Strasse";
-        var fontSizePercentage = 0.15 / 100;
+        var fontSizePercentage = 0.07 / 100;
         ammoNb.fontSize = (window.innerHeight + window.innerWidth) / 2 * fontSizePercentage;
         ammoNb.color = "black";
         ammoNb.resizeToFit = true;
         ammoNb.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;  // Set alignment to center
-        ammoNb.paddingLeftInPixels = 3;
+        ammoNb.paddingLeftInPixels = 1;
 
         ammoContainer.addControl(ammoNb);
         imageRect.addControl(ammoContainer);
@@ -551,19 +559,18 @@ class App {
         hbImgRed.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT; // Align to right
 
         var container = new Rectangle("container");
-        container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        container.top = "35%";
-        container.height = "16%";
-        container.width = "25%";
+        container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        container.top = "-18px";
+        container.height = "12%";
+        container.width = "15%";
         container.paddingBottom="3px";
         container.thickness = 0;
-        container.alpha = 0.2;
+        container.alpha = 1;
         container.addControl(hbImg); // Add background first
         container.addControl(hbImgRed); // Add red health bar second so it's on top
 
         guiGame.addControl(container);
 
-        var right = 0;
         this._scene.onAfterRenderObservable.add(function () {
             // Update the width of the red health bar
             hbImgRed.width = PlayerHealth._current_Health / PlayerHealth._max_Health;

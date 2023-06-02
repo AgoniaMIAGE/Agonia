@@ -36,7 +36,6 @@ export class Round{
             {
                 this._ambianceMusic.play();
             }
-        
             this._skyboxMaterial.luminance = 0;
             this._skyboxMaterial.useSunPosition = false;
     }

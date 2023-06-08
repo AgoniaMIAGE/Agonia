@@ -12,6 +12,7 @@ import { Boss } from "./Boss";
 import { Zombie } from "./Zombie";
 import { UtilityLayerRenderer, Engine, int, KeyboardEventTypes, SceneOptimizer, SceneOptimizerOptions, Tools, ArcRotateCamera, OimoJSPlugin, SpotLight, HemisphericLight, Scene, Animation, Vector3, Mesh, Color3, Color4, ShadowGenerator, GlowLayer, PointLight, FreeCamera, CubeTexture, Sound, PostProcess, Effect, SceneLoader, Matrix, MeshBuilder, Quaternion, AssetsManager, StandardMaterial, PBRMaterial, Material, float, Light } from "@babylonjs/core";
 import { Round } from "./Round";
+import { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 
 //import { CustomLoadingUI } from "./CustomLoadingUi";
 
@@ -67,7 +68,12 @@ class App {
     constructor() {
         //assign the canvas and engine
         this._canvas = this._createCanvas();
-        this._engine = new Engine(this._canvas, true);
+        // Try to create a WebGPUEngine, but fall back to a regular Engine if not available
+        try {
+            this._engine = new WebGPUEngine(this._canvas);
+        } catch {
+            this._engine = new Engine(this._canvas, true);
+        }
         this._scene = new Scene(this._engine);
 
 

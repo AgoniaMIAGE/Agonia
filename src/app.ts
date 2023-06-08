@@ -23,7 +23,7 @@ class App {
     // General Entire Application
     private _scene: Scene;
     private _canvas: HTMLCanvasElement;
-    private _engine: Engine;
+    private _engine: WebGPUEngine;
     private _difficulty: int;
     private _velocity: float;
     private _velocity2: float;
@@ -66,19 +66,23 @@ class App {
     private _state: number = 0;
 
     constructor() {
-        //assign the canvas and engine
+        //assign the canvas
         this._canvas = this._createCanvas();
-        // Try to create a WebGPUEngine, but fall back to a regular Engine if not available
-        try {
-            this._engine = new WebGPUEngine(this._canvas);
-        } catch {
-            this._engine = new Engine(this._canvas, true);
-        }
+        // call initialization method
+        this.initialize();
+    }
+
+    async initialize() {
+        // Create a WebGPUEngine instead of a regular Engine
+        this._engine = new WebGPUEngine(this._canvas);
+
+        await this._engine.initAsync();
+
         this._scene = new Scene(this._engine);
 
-
-        var camera: ArcRotateCamera = new ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 2, 2, Vector3.Zero(), this._scene);
+        var camera = new ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 2, 2, Vector3.Zero(), this._scene);
         camera.attachControl(this._canvas, true);
+
         this.main();
     }
 
@@ -344,7 +348,8 @@ class App {
                     else {
                         clearInterval(1);
                     }
-                }}, 60);
+                }
+            }, 60);
 
         })
     }

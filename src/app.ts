@@ -466,12 +466,18 @@ class App {
         this._engine.loadingUIText = "\nChargement en cours... \nLe chargement peut prendre quelques minutes selon votre connexion internet.\n Merci de patienter.";
         this._engine.displayLoadingUI();
         await this.createMap();
-        this._fps.createLights();
+        if(this.currentDifficultyIndex === 0 || this.currentDifficultyIndex === 1){
+            var light = new HemisphericLight("light", new Vector3(0, 1, 0), this._scene);
+            light.intensity = 0.1;
+        }
+        else{
+            this._fps.createLights();
+        }
         await this._scene.whenReadyAsync();
 
         //AFTER LOADING
         this._engine.hideLoadingUI();
-        //this._scene.debugLayer.show();
+        this._scene.debugLayer.show();
         this._fps.diableCarpet();
         this._scene.attachControl();
         this._fps.openDoorAtStart();

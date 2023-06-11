@@ -648,64 +648,10 @@ export class FPSController {
         }
     }
 
-    public hitboxCorrection(): void {
-        let collisionNames = [
-            "Wall5X_DoorWay_CR.001_primitive0",
-            "Wall_WindowHole (4)_primitive0",
-            "Window.Down.007_primitive0",
-            "Wall5X_CL.004_primitive0",
-            "Wall5X_DoorWay_CL (3)_primitive0",
-            "Wall5X_CR.003_primitive0",
-            "OldDoor.001",
-            "Wall_WindowHole (3)_primitive0",
-            "Wall_WindowHole (2)_primitive0",
-            "WallWindow (3)",
-            "WallWindow (4)"
-        ];
-
-        collisionNames.forEach(name => {
-            let mesh = this._scene.getMeshByName(name);
-            if (mesh) {
-                // Create an invisible wall by duplicating the existing mesh
-                let invisibleWall = mesh.clone("invisibleWall_", mesh.parent);
-                invisibleWall.isVisible = false;
-
-                // Move the invisible wall slightly along the Z axis
-                invisibleWall.position.z += 0.05;
-
-                invisibleWall.showBoundingBox = true;
-
-
-                // Create an imposter for the invisible wall (acting as a hitbox)
-                invisibleWall.physicsImpostor = new PhysicsImpostor(
-                    invisibleWall,
-                    PhysicsImpostor.BoxImpostor,
-                    { mass: 0, restitution: 0.9, friction: 0.5 },
-                    this._scene
-                );
-            }
-        });
-
-    }
-
-
-
-    public correctHitbox2(): void {
-        this._camera.onCollide = function (collidedMesh) {
-            // get the direction in which the camera is moving
-            let direction = this._camera.getDirection(new BABYLON.Vector3(0, 0, 1));
-
-            // reverse the direction
-            direction.negate();
-
-            // move the camera slightly in the opposite direction
-            this._camera.position.addInPlace(direction.scale(0.1));
-        }
-    }
-
-
-
-    // In your constructor or initialization method
+   
+    /**
+     * movements 
+     */
     private InitCameraKeys(): void {
         this.cameraKeys = {
             up: [90], // z
@@ -1124,6 +1070,8 @@ export class FPSController {
             return;
         }
 
+        this._reloadSound.play();
+
         // We indicate that we're currently reloading
         this.isReloading = true;
 
@@ -1512,8 +1460,6 @@ export class FPSController {
         this._end.loopAnimation = false;
 
 
-        //audio effect 
-        this._weaponSound = new Sound("attack", "sounds/snipershot.mp3", this._scene);
     }
 
     private changeState(newState: CharacterState) {
@@ -1594,7 +1540,6 @@ export class FPSController {
 
     private initialPosition: Vector3 = null;
     private lastParentName: string = null;
-    // Add these properties to your class
     private initialRotation: Vector3;
     private firstChild = null;
     private cameraKeys: { up: number[], down: number[], left: number[], right: number[] };
@@ -2749,20 +2694,20 @@ export class FPSController {
         emitterBox.parent = this._camera;
 
         // Position it at the end of the gun barrel
-        emitterBox.position = new Vector3(0.07, 1.6, -0.8); // adjust to match your model
+        emitterBox.position = new Vector3(0.07, 1.6, -0.8); 
 
         this.muzzleLight = new PointLight('muzzleLight', new Vector3(0, 0, 0), this._scene);
         // Attach it to the gun
         this.muzzleLight.parent = emitterBox;
         // Position it at the end of the gun barrel
-        this.muzzleLight.position = new Vector3(0, 0, 0); // adjust to match your model
+        this.muzzleLight.position = new Vector3(0, 0, 0); 
         // Set its initial intensity to zero
         this.muzzleLight.intensity = 0;
     }
 
 
     private muzzleFlash() {
-        this.muzzleLight.intensity = 20; // adjust the intensity to match your needs
+        this.muzzleLight.intensity = 20; 
         setTimeout(() => {
             this.muzzleLight.intensity = 0;
         }, 100);

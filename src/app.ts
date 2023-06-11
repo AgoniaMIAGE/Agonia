@@ -468,7 +468,8 @@ class App {
         await this.createMap();
         if(this.currentDifficultyIndex === 0 || this.currentDifficultyIndex === 1){
             var light = new HemisphericLight("light", new Vector3(0, 1, 0), this._scene);
-            light.intensity = 0.1;
+            light.intensity = 0.05;
+            light.diffuse = new Color3(255/255, 166/255, 166/255);
         }
         else{
             this._fps.createLights();
@@ -477,7 +478,7 @@ class App {
 
         //AFTER LOADING
         this._engine.hideLoadingUI();
-        this._scene.debugLayer.show();
+        //this._scene.debugLayer.show();
         this._fps.diableCarpet();
         this._scene.attachControl();
         this._fps.openDoorAtStart();
